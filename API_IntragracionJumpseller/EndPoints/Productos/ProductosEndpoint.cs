@@ -34,7 +34,6 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 if (Result.IsSuccessStatusCode)
                 {
                     string responseContent = await Result.Content.ReadAsStringAsync();
-                    Console.WriteLine(responseContent); // Log the response content
                     List<ProductsModel> response = JsonConvert.DeserializeObject<List<ProductsModel>>(responseContent);
                     return Results.Ok(response);
                 }
