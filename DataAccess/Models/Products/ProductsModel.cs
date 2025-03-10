@@ -16,12 +16,12 @@ namespace DataAccess.Models.Products
         public class Product
         {
             public int id { get; set; }
-            public string name { get; set; }
+            public string name { get; set; } // required
             public string page_title { get; set; }
             public string description { get; set; }
             public string type { get; set; }
             public int? days_to_expire { get; set; }
-            public float price { get; set; }
+            public float price { get; set; } // required
             public float discount { get; set; }
             public float weight { get; set; }
             public int stock { get; set; }
