@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.12.35707.178 d17.12
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API_IntragracionJumpseller", "API_IntragracionJumpseller\API_IntragracionJumpseller.csproj", "{90651EF3-7043-498C-A988-CB28791F5736}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataAccess", "DataAccess\DataAccess.csproj", "{636A9AD8-D845-4760-993F-148C07BCED64}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{90651EF3-7043-498C-A988-CB28791F5736}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90651EF3-7043-498C-A988-CB28791F5736}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90651EF3-7043-498C-A988-CB28791F5736}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90651EF3-7043-498C-A988-CB28791F5736}.Release|Any CPU.Build.0 = Release|Any CPU
+		{636A9AD8-D845-4760-993F-148C07BCED64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{636A9AD8-D845-4760-993F-148C07BCED64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{636A9AD8-D845-4760-993F-148C07BCED64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{636A9AD8-D845-4760-993F-148C07BCED64}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
