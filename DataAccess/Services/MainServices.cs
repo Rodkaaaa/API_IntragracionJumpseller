@@ -9,6 +9,7 @@ namespace DataAccess.Shared.Services
         #region Instancias de Multivende
 
         public ClientFactory JumpSeller { get; set; } = new ClientFactory("https://api.jumpseller.com/");
+        public ClientFactory ImgBB { get; set; } = new ClientFactory("https://api.imgbb.com/");
         public ClientFactory FullBikeAPI { get; set; } = new ClientFactory("https://fullbikeapi.andesindustrial.cl/");
         public ClientFactory Conexion { get; set; } = new ClientFactory("https://apicda.andesindustrial.cl/");
 
