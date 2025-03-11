@@ -60,7 +60,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                 }
                             }
                         }
-                        foreach (var item in ListaProductosTotales.FindAll(x => x.product.sku == "S60723"))
+                        foreach (var item in ListaProductosTotales)
                         {
                             var formData = new MultipartFormDataContent();
                             string imageBase64 = await ConvertImageUrlToBase64(item.product.images.FirstOrDefault()?.url ?? string.Empty);
@@ -90,7 +90,6 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                     {
                                         string responseProductoShimanoImg = await ResultPostPorductImgShimano.Content.ReadAsStringAsync();
                                         ImgJumpsellerModel? responseProductoShimanoImgData = JsonConvert.DeserializeObject<ImgJumpsellerModel>(responseProductoShimanoImg);
-                                        return Results.Ok(responseProductoShimanoImgData);
                                     }
 
                                 }
@@ -99,7 +98,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
 
                     }
                 }
-                return Results.BadRequest("sin articulos");
+                return Results.BadRequest("ARticulos creados");
             }
             catch (Exception ex)
             {
