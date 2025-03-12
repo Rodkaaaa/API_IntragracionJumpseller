@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace DataAccess.Shared.Services
@@ -7,11 +8,14 @@ namespace DataAccess.Shared.Services
     public class MainServices
     {
         #region Instancias de Multivende
-
-        public ClientFactory JumpSeller { get; set; } = new ClientFactory("https://api.jumpseller.com/");
-        public ClientFactory ImgBB { get; set; } = new ClientFactory("https://api.imgbb.com/");
-        public ClientFactory FullBikeAPI { get; set; } = new ClientFactory("https://fullbikeapi.andesindustrial.cl/");
-        public ClientFactory Conexion { get; set; } = new ClientFactory("https://apicda.andesindustrial.cl/");
+        [Required]
+        public static ClientFactory JumpSeller { get; set; } = new ClientFactory("https://api.jumpseller.com/");
+        [Required]
+        public static ClientFactory ImgBB { get; set; } = new ClientFactory("https://api.imgbb.com/");
+        [Required]
+        public static ClientFactory FullBikeAPI { get; set; } = new ClientFactory("https://fullbikeapi.andesindustrial.cl/");
+        [Required]
+        public static ClientFactory Conexion { get; set; } = new ClientFactory("https://apicda.andesindustrial.cl/");
 
         #endregion
 
@@ -26,7 +30,7 @@ namespace DataAccess.Shared.Services
             return instance;
         }
 
-        public MainServices()
+        public  MainServices()
         {
             instance = this;
         }
