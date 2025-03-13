@@ -8,25 +8,25 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
     {
         private static IConfiguration _configuration;
 
-        public static async void Configurar_ProductosEndpoint(this WebApplication app, IConfiguration configuration, string versionApi)
+        public static void ConfigurarProductosEndpoint(this WebApplication app, IConfiguration configuration, string versionApi)
         {
             _configuration = configuration; // Asigna la configuración a la variable estática.
             string controller = "Productos"; // Define el nombre del controlador.
 
             // Configura la ruta GET para obtener productos.
-            app.MapGet($"{versionApi}/{controller}/GetProductos",
+            app.MapGet($"{versionApi}/{controller}/MigrateProducts",
             async (IConfiguration configuration) =>
-            await GetProducts(configuration))
+            await MigrateProductos(configuration))
             .WithTags(controller);
 
             // Configura la ruta GET para obtener productos.
-            app.MapGet($"{versionApi}/{controller}/UpdateProductos",
+            app.MapGet($"{versionApi}/{controller}/UpdateProducts",
             async (IConfiguration configuration) =>
             await UpdateProductos(configuration))
             .WithTags(controller);
         }
 
-        private static async Task<IResult> GetProducts(IConfiguration configuration)
+        private static async Task<IResult> MigrateProductos(IConfiguration configuration)
         {
             try
             {
@@ -42,6 +42,9 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 List<ProductsModel> totalProductsList = new(); // Crea una lista para almacenar todos los productos.
                 List<ResponseCreacion> createdProducts = new(); // Crea una lista para almacenar los productos creados.
 
+
+                //NOTE: Para crear prodcutos con el SP de andes , se puede cambiar esta seccion llamando el SP de andes y guardando los datos en una lista y luego dando un count para cverificar cuantos productos son 
+                //NOTE: Recordar que se debe generar un modelo con el ProdcutModel de jumpSeller con los datos de andes para poder dar la creacion inicial de articulos en jumpSeller
                 var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={loginPeru}&authtoken={tokenPeru}"); // Realiza una solicitud GET para obtener el conteo de productos.
                 if (resultCount.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
                 {
@@ -50,7 +53,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                     if (productCount != null) // Verifica si el conteo de productos no es nulo.
                     {
                         int totalPages = (int)Math.Ceiling((decimal)productCount.count / 100); // Calcula el número total de páginas.
-                        for (int i = 1; i <= totalPages + 1; i++) // Itera sobre cada página.
+                        for (int i = 1; i <= totalPages; i++) // Itera sobre cada página.
                         {
                             var result = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlProducts}?login={loginPeru}&authtoken={tokenPeru}&limit=100&page={i + 1}"); // Realiza una solicitud GET para obtener productos.
                             if (result.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
@@ -170,6 +173,10 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                         }
                     }
                 }
+                else
+                {
+                    return Results.BadRequest("No existen productos para crear"); //Devuelve error Si no el count de articulos es = 0
+                }
                 return Results.Ok(createdProducts); // Devuelve la lista de productos creados.
             }
             catch (Exception ex) // Captura cualquier excepción que ocurra.
@@ -183,22 +190,88 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
             {
                 MainServices service = new MainServices(); // Crea una instancia de MainServices.
                 string urlProducts = "v1/products.json"; // Define la URL para obtener productos.
+                string urlUpdateProducts = "v1/products/"; // Define la URL para Updatear productos.
                 string urlCount = "v1/products/count.json"; // Define la URL para obtener el conteo de productos.
-                string urlImgbbPost = "1/upload"; // Define la URL para subir imágenes a ImgBB.
-                string loginPeru = "f23cb72f86246e387cd40d892a508f59"; // Define el login para Perú.
-                string tokenPeru = "edc68361f51feae4f871ae23eba581ea"; // Define el token para Perú.
-                string loginShimano = "b2096c5eda7370c1eee69c9de9c15883"; // Define el login para Shimano.
-                string tokenShimano = "e854b7ca1b3877825d8ee522d70ab608"; // Define el token para Shimano.
-                string imgbbToken = "5badf53104d4acbe92cacf73cc8b381d"; // Define el token para ImgBB.
+                string login = "f23cb72f86246e387cd40d892a508f59"; // Define el login.
+                string token = "edc68361f51feae4f871ae23eba581ea"; // Define el token.
                 List<ProductsModel> totalProductsList = new(); // Crea una lista para almacenar todos los productos.
                 List<ResponseCreacion> createdProducts = new(); // Crea una lista para almacenar los productos creados.
+                List<dynamic> ListaAndes = new(); // TODO: Definir campos para el modelo de los articulos andes a consultar
 
-
-                return Results.Ok("Updated"); // Devuelve un mensaje de error.
+                //TODO: COnsultar Articulos ANdes Con sus respectivos datos Y guardar en lista
 
 
                 //TODO: CREAR TODA LA LOGICA PARA UPDATEAR ARTICULOS EN JUMPSELLER
 
+                var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={login}&authtoken={token}"); // Realiza una solicitud GET para obtener el conteo de productos.
+                if (resultCount.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                {
+                    string responseCount = await resultCount.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
+                    CountModel? productCount = JsonConvert.DeserializeObject<CountModel>(responseCount); // Deserializa el conteo de productos.
+                    if (productCount != null) // Verifica si el conteo de productos no es nulo.
+                    {
+                        int totalPages = (int)Math.Ceiling((decimal)productCount.count / 100); // Calcula el número total de páginas.
+                        for (int i = 1; i <= totalPages; i++) // Itera sobre cada página.
+                        {
+                            var result = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlProducts}?login={login}&authtoken={token}&limit=100&page={i + 1}"); // Realiza una solicitud GET para obtener productos.
+                            if (result.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                            {
+                                string responseContent = await result.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
+                                List<ProductsModel>? response = JsonConvert.DeserializeObject<List<ProductsModel>>(responseContent); // Deserializa la lista de productos.
+                                if (response != null && response.Count > 0) // Verifica si la respuesta no es nula y contiene productos.
+                                {
+                                    totalProductsList.AddRange(response); // Agrega los productos a la lista total.
+                                }
+                            }
+                        }
+                    }
+                    foreach (var item in totalProductsList)
+                    {
+                        service = new MainServices(); // actualiza la instancia de MainServices.
+
+                        //TODO: CREAR TODA LA LOGICA PARA UPDATEAR ARTICULOS EN JUMPSELLER (cuando tenga disponible la toma de datos de andes)
+                        if (ListaAndes.Find(x => x.sku == item.product.sku).stock > 0)// Verifica si el stock es mayor a 0.
+                        {
+                            item.product.stock = ListaAndes.Find(x => x.sku == item.product.sku).stock;//modifica stock
+                            item.product.status = "available";// lo pone disponible
+                        }
+                        else if (ListaAndes.Find(x => x.sku == item.product.sku).stock == 0) // Verifica si el stock es mayor a 0.
+                        {
+                            item.product.stock = ListaAndes.Find(x => x.sku == item.product.sku).stock;//modifica stock
+                            item.product.status = "disabled";// lo pone deshabilitado
+                        }
+                        var ResponsePutPRoducto = await MainServices.JumpSeller.HttpClientInstance.PutAsJsonAsync($"{urlUpdateProducts}{item.product.id}.json?login={login}&authtoken={token}", item); // Realiza una solicitud PUT para Actualizar el producto en JumpSeller.
+                        if (ResponsePutPRoducto.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                        {
+                            createdProducts.Add(new ResponseCreacion // Agrega el producto Actualizado a la lista de productos creados.
+                            {
+                                IDJumpseller = item.product.id,
+                                Sku = item.product.sku,
+                                NombreArticulo = item.product.name,
+                                SiImg = "",
+                                Status = "Actualizado"
+                            });
+
+                        }
+                        else {
+                            createdProducts.Add(new ResponseCreacion // Agrega el producto Actualizado a la lista de productos creados.
+                            {
+                                IDJumpseller = item.product.id,
+                                Sku = item.product.sku,
+                                NombreArticulo = item.product.name,
+                                SiImg = "",
+                                Status = "No Actualizado"
+                            });
+                        }
+                        //TODO: Validar Errores para la actualizacion de Artiuclos en Jumpseller 805636
+                    }
+                }
+                else
+                {
+                    return Results.BadRequest("No existen productos para crear"); //Devuelve error Si no el count de articulos es == 0
+                }
+
+                return Results.Ok("Updated"); // Devuelve un mensaje de error.
             }
             catch (Exception ex) // Captura cualquier excepción que ocurra.
             {

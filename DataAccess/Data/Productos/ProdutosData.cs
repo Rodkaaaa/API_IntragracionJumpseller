@@ -1,4 +1,6 @@
-﻿using System;
+﻿using DataAccess.DbAccess;
+using Microsoft.Extensions.Configuration;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,5 +10,25 @@ namespace DataAccess.Data.Productos
 {
     public class ProductosData : IProductosData
     {
+
+        public readonly ISqlDataAccess _db;
+        public readonly IConfiguration _configuration;
+        private readonly int IDAllGestEmpresa;
+        private readonly int IDEmpresa;
+        private readonly string CompanyDBSAP;
+        private readonly string CompanyDBFULL;
+        private readonly string UsuarioActivo;
+
+        public ProductosData(ISqlDataAccess db, IConfiguration configuration)
+        {
+            _db = db;
+            _configuration = configuration;
+
+            IDAllGestEmpresa = Convert.ToInt32(_configuration["AGSettings:IDAllgestEmpresa"]);
+            IDEmpresa = Convert.ToInt32(_configuration["AGSettings:IDEmpresa"]);
+            CompanyDBSAP = _configuration["AGSettings:CompanyDBSAP"];
+            CompanyDBFULL = _configuration["AGSettings:CompanyDBFULL"];
+            UsuarioActivo = _configuration["AGSettings:UsuarioActivo"];
+        }
     }
 }

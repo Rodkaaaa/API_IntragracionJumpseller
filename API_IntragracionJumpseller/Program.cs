@@ -60,7 +60,7 @@ builder.Services.AddSwaggerGen();
 // Add EndPoints
 var app = builder.Build();
 
-app.Configurar_ProductosEndpoint(builder.Configuration, builder.Configuration["AGSettings:versionApi"]);
+app.ConfigurarProductosEndpoint(builder.Configuration, builder.Configuration["AGSettings:versionApi"]);
 
 
 // Configure the HTTP request pipeline.

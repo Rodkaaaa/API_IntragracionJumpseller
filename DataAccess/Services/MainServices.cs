@@ -7,7 +7,7 @@ namespace DataAccess.Shared.Services
 {
     public class MainServices
     {
-        #region Instancias de Multivende
+        #region Instancias de JumpSeller, ImgBB, FullBikeAPI y Conexion
         [Required]
         public static ClientFactory JumpSeller { get; set; } = new ClientFactory("https://api.jumpseller.com/");
         [Required]

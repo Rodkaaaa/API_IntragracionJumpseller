@@ -48,9 +48,9 @@ namespace DataAccess.Models.Products
         public float height { get; set; }
         public float diameter { get; set; }
         public string permalink { get; set; }
-        public List<Category> categories { get; set; }
-        public List<Image> images { get; set; }
-        public List<Variant> variants { get; set; }
+        public List<Category>? categories { get; set; }
+        public List<Image>? images { get; set; }
+        public List<Variant>? variants { get; set; }
     }
 
     public class Category
