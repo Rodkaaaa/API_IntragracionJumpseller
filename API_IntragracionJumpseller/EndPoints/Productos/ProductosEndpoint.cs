@@ -196,6 +196,9 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
 
                 return Results.Ok("Updated"); // Devuelve un mensaje de error.
 
+
+                //TODO: CREAR TODA LA LOGICA PARA UPDATEAR ARTICULOS EN JUMPSELLER
+
             }
             catch (Exception ex) // Captura cualquier excepción que ocurra.
             {
