@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -16,11 +17,13 @@ namespace DataAccess.Models.Products
     public class Product
     {
         public int id { get; set; }
+        [Required]
         public string name { get; set; } // required
         public string page_title { get; set; }
         public string description { get; set; }
         public string type { get; set; }
         public int? days_to_expire { get; set; }
+        [Required]
         public float price { get; set; } // required
         public float discount { get; set; }
         public float weight { get; set; }
