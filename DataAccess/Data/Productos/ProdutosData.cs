@@ -1,4 +1,5 @@
 ﻿using DataAccess.DbAccess;
+using DataAccess.Models.ProductAndes;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
@@ -30,5 +31,13 @@ namespace DataAccess.Data.Productos
             CompanyDBFULL = _configuration["AGSettings:CompanyDBFULL"];
             UsuarioActivo = _configuration["AGSettings:UsuarioActivo"];
         }
+
+        public Task<IEnumerable<ProductAndesModel>> GetProductosAndes() =>
+         _db.LoadData<ProductAndesModel, dynamic>(storedProcedure: "sp_Test_Articulos",
+           new
+           {
+               IDAllGestEmpresa = IDAllGestEmpresa,
+               IDEmpresa = IDEmpresa
+           });
     }
 }

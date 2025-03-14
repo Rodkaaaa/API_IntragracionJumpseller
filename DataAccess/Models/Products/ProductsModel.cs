@@ -20,6 +20,7 @@ namespace DataAccess.Models.Products
         [Required]
         public string name { get; set; } // required
         public string page_title { get; set; }
+        public string meta_description { get; set; }
         public string description { get; set; }
         public string type { get; set; }
         public int? days_to_expire { get; set; }
