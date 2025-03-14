@@ -399,7 +399,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                     return Results.BadRequest("No existen productos para crear");
                 }
 
-                return Results.Ok("Updated");
+                return Results.Ok(createdProducts);
             }
             catch (Exception ex)
             {
