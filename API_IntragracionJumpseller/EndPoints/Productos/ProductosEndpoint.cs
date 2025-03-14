@@ -1,4 +1,5 @@
-﻿using DataAccess.Models.Products;
+﻿using DataAccess.Data.Productos;
+using DataAccess.Models.Products;
 using DataAccess.Shared.Services;
 using Newtonsoft.Json;
 
@@ -10,19 +11,22 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
 
         public static void ConfigurarProductosEndpoint(this WebApplication app, IConfiguration configuration, string versionApi)
         {
-            _configuration = configuration; // Asigna la configuración a la variable estática.
-            string controller = "Productos"; // Define el nombre del controlador.
+            _configuration = configuration;
+            string controller = "Productos";
 
-            // Configura la ruta GET para obtener productos.
             app.MapGet($"{versionApi}/{controller}/MigrateProducts",
             async (IConfiguration configuration) =>
             await MigrateProductos(configuration))
             .WithTags(controller);
 
-            // Configura la ruta GET para obtener productos.
+            app.MapGet($"{versionApi}/{controller}/AndestoJumpProductos",
+            async (IConfiguration configuration, IProductosData data) =>
+            await AndestoJumpProductos(configuration, data))
+            .WithTags(controller);
+
             app.MapGet($"{versionApi}/{controller}/UpdateProducts",
-            async (IConfiguration configuration) =>
-            await UpdateProductos(configuration))
+            async (IConfiguration configuration, IProductosData data) =>
+            await UpdateProductos(configuration, data))
             .WithTags(controller);
         }
 
@@ -30,66 +34,63 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
         {
             try
             {
-                MainServices service = new MainServices(); // Crea una instancia de MainServices.
-                string urlProducts = "v1/products.json"; // Define la URL para obtener productos.
-                string urlCount = "v1/products/count.json"; // Define la URL para obtener el conteo de productos.
-                string urlImgbbPost = "1/upload"; // Define la URL para subir imágenes a ImgBB.
-                string loginPeru = "f23cb72f86246e387cd40d892a508f59"; // Define el login para Perú.
-                string tokenPeru = "edc68361f51feae4f871ae23eba581ea"; // Define el token para Perú.
-                string loginShimano = "b2096c5eda7370c1eee69c9de9c15883"; // Define el login para Shimano.
-                string tokenShimano = "e854b7ca1b3877825d8ee522d70ab608"; // Define el token para Shimano.
-                string imgbbToken = "5badf53104d4acbe92cacf73cc8b381d"; // Define el token para ImgBB.
-                List<ProductsModel> totalProductsList = new(); // Crea una lista para almacenar todos los productos.
-                List<ResponseCreacion> createdProducts = new(); // Crea una lista para almacenar los productos creados.
+                MainServices service = new MainServices();
+                string urlProducts = "v1/products.json";
+                string urlCount = "v1/products/count.json";
+                string urlImgbbPost = "1/upload";
+                string loginPeru = "f23cb72f86246e387cd40d892a508f59";
+                string tokenPeru = "edc68361f51feae4f871ae23eba581ea";
+                string loginShimano = "b2096c5eda7370c1eee69c9de9c15883";
+                string tokenShimano = "e854b7ca1b3877825d8ee522d70ab608";
+                string imgbbToken = "5badf53104d4acbe92cacf73cc8b381d";
+                List<ProductsModel> totalProductsList = new();
+                List<ResponseCreacion> createdProducts = new();
 
-
-                //NOTE: Para crear prodcutos con el SP de andes , se puede cambiar esta seccion llamando el SP de andes y guardando los datos en una lista y luego dando un count para cverificar cuantos productos son 
-                //NOTE: Recordar que se debe generar un modelo con el ProdcutModel de jumpSeller con los datos de andes para poder dar la creacion inicial de articulos en jumpSeller
-                var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={loginPeru}&authtoken={tokenPeru}"); // Realiza una solicitud GET para obtener el conteo de productos.
-                if (resultCount.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={loginPeru}&authtoken={tokenPeru}");
+                if (resultCount.IsSuccessStatusCode)
                 {
-                    string responseCount = await resultCount.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
-                    CountModel? productCount = JsonConvert.DeserializeObject<CountModel>(responseCount); // Deserializa el conteo de productos.
-                    if (productCount != null) // Verifica si el conteo de productos no es nulo.
+                    string responseCount = await resultCount.Content.ReadAsStringAsync();
+                    CountModel? productCount = JsonConvert.DeserializeObject<CountModel>(responseCount);
+                    if (productCount != null)
                     {
-                        int totalPages = (int)Math.Ceiling((decimal)productCount.count / 100); // Calcula el número total de páginas.
-                        for (int i = 1; i <= totalPages; i++) // Itera sobre cada página.
+                        int totalPages = (int)Math.Ceiling((decimal)productCount.count / 100);
+                        for (int i = 1; i <= totalPages; i++)
                         {
-                            var result = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlProducts}?login={loginPeru}&authtoken={tokenPeru}&limit=100&page={i + 1}"); // Realiza una solicitud GET para obtener productos.
-                            if (result.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                            var result = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlProducts}?login={loginPeru}&authtoken={tokenPeru}&limit=100&page={i + 1}");
+                            if (result.IsSuccessStatusCode)
                             {
-                                string responseContent = await result.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
-                                List<ProductsModel>? response = JsonConvert.DeserializeObject<List<ProductsModel>>(responseContent); // Deserializa la lista de productos.
-                                if (response != null && response.Count > 0) // Verifica si la respuesta no es nula y contiene productos.
+                                string responseContent = await result.Content.ReadAsStringAsync();
+                                List<ProductsModel>? response = JsonConvert.DeserializeObject<List<ProductsModel>>(responseContent);
+                                if (response != null && response.Count > 0)
                                 {
-                                    totalProductsList.AddRange(response.Where(x => x.product.sku != null).ToList().FindAll(x => x.product.sku.Contains("S") || x.product.sku.Contains("s"))); // Agrega los productos a la lista total.
+                                    totalProductsList.AddRange(response.Where(x => x.product.sku != null).ToList().FindAll(x => x.product.sku.Contains("S") || x.product.sku.Contains("s")));
                                 }
                             }
                         }
 
-                        foreach (var product in totalProductsList) // Itera sobre cada producto en la lista total.
+                        foreach (var product in totalProductsList)
                         {
-                            service = new MainServices(); // Crea una nueva instancia de MainServices.
-                            var formData = new MultipartFormDataContent(); // Crea un nuevo contenido de formulario multipart.
-                            string imageBase64 = await ConvertImageUrlToBase64(product.product.images.FirstOrDefault()?.url ?? string.Empty); // Convierte la URL de la imagen a Base64.
-                            if (imageBase64 != "error") // Verifica si la conversión fue exitosa.
+                            service = new MainServices();
+                            var formData = new MultipartFormDataContent();
+                            string imageBase64 = await ConvertImageUrlToBase64(product.product.images.FirstOrDefault()?.url ?? string.Empty);
+                            if (imageBase64 != "error")
                             {
-                                formData.Add(new StringContent(imageBase64), "image"); // Agrega la imagen en Base64 al formulario.
-                                var resultImgBB = await MainServices.ImgBB.HttpClientInstance.PostAsync($"{urlImgbbPost}?&key={imgbbToken}", formData); // Realiza una solicitud POST para subir la imagen a ImgBB.
-                                if (resultImgBB.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                                formData.Add(new StringContent(imageBase64), "image");
+                                var resultImgBB = await MainServices.ImgBB.HttpClientInstance.PostAsync($"{urlImgbbPost}?&key={imgbbToken}", formData);
+                                if (resultImgBB.IsSuccessStatusCode)
                                 {
-                                    string responseImgbb = await resultImgBB.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
-                                    ResponseImgBBModel? responseImgbbData = JsonConvert.DeserializeObject<ResponseImgBBModel>(responseImgbb); // Deserializa la respuesta de ImgBB.
-                                    product.product.images.FirstOrDefault().url = responseImgbbData.data.url; // Actualiza la URL de la imagen del producto.
-                                    product.product.images.FirstOrDefault().id = 0; // Establece el ID de la imagen a 0.
-                                    product.product.id = 0; // Establece el ID del producto a 0.
-                                    var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={loginShimano}&authtoken={tokenShimano}", product); // Realiza una solicitud POST para crear el producto en JumpSeller.
-                                    if (resultPostProduct.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                                    string responseImgbb = await resultImgBB.Content.ReadAsStringAsync();
+                                    ResponseImgBBModel? responseImgbbData = JsonConvert.DeserializeObject<ResponseImgBBModel>(responseImgbb);
+                                    product.product.images.FirstOrDefault().url = responseImgbbData.data.url;
+                                    product.product.images.FirstOrDefault().id = 0;
+                                    product.product.id = 0;
+                                    var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={loginShimano}&authtoken={tokenShimano}", product);
+                                    if (resultPostProduct.IsSuccessStatusCode)
                                     {
-                                        string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
-                                        ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano); // Deserializa la respuesta del producto.
-                                        string createArticleUrl = $"v1/products/{responseProductShimanoData?.product.id}/images.json"; // Define la URL para crear la imagen del producto.
-                                        ImgJumpsellerModel imgPost = new ImgJumpsellerModel() // Crea un nuevo modelo de imagen para JumpSeller.
+                                        string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                        ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                        string createArticleUrl = $"v1/products/{responseProductShimanoData?.product.id}/images.json";
+                                        ImgJumpsellerModel imgPost = new ImgJumpsellerModel()
                                         {
                                             image = new ImagePost
                                             {
@@ -97,12 +98,12 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                                 position = product.product.images.FirstOrDefault().position
                                             }
                                         };
-                                        var resultPostProductImgShimano = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ImgJumpsellerModel>($"{createArticleUrl}?login={loginShimano}&authtoken={tokenShimano}", imgPost); // Realiza una solicitud POST para crear la imagen del producto en JumpSeller.
-                                        if (resultPostProductImgShimano.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                                        var resultPostProductImgShimano = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ImgJumpsellerModel>($"{createArticleUrl}?login={loginShimano}&authtoken={tokenShimano}", imgPost);
+                                        if (resultPostProductImgShimano.IsSuccessStatusCode)
                                         {
-                                            string responseProductShimanoImg = await resultPostProductImgShimano.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
-                                            ImgJumpsellerModel? responseProductShimanoImgData = JsonConvert.DeserializeObject<ImgJumpsellerModel>(responseProductShimanoImg); // Deserializa la respuesta de la imagen del producto.
-                                            createdProducts.Add(new ResponseCreacion // Agrega el producto creado a la lista de productos creados.
+                                            string responseProductShimanoImg = await resultPostProductImgShimano.Content.ReadAsStringAsync();
+                                            ImgJumpsellerModel? responseProductShimanoImgData = JsonConvert.DeserializeObject<ImgJumpsellerModel>(responseProductShimanoImg);
+                                            createdProducts.Add(new ResponseCreacion
                                             {
                                                 IDJumpseller = responseProductShimanoData.product.id,
                                                 Sku = responseProductShimanoData.product.sku,
@@ -113,14 +114,14 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                         }
                                     }
                                 }
-                                else // Si la solicitud para subir la imagen a ImgBB falla.
+                                else
                                 {
-                                    var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={loginShimano}&authtoken={tokenShimano}", product); // Realiza una solicitud POST para crear el producto en JumpSeller sin imagen.
-                                    if (resultPostProduct.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                                    var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={loginShimano}&authtoken={tokenShimano}", product);
+                                    if (resultPostProduct.IsSuccessStatusCode)
                                     {
-                                        string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
-                                        ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano); // Deserializa la respuesta del producto.
-                                        createdProducts.Add(new ResponseCreacion // Agrega el producto creado a la lista de productos creados.
+                                        string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                        ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                        createdProducts.Add(new ResponseCreacion
                                         {
                                             IDJumpseller = responseProductShimanoData.product.id,
                                             Sku = responseProductShimanoData.product.sku,
@@ -129,9 +130,9 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                             Status = "Creado"
                                         });
                                     }
-                                    else // Si la solicitud para crear el producto falla.
+                                    else
                                     {
-                                        createdProducts.Add(new ResponseCreacion // Agrega el producto no creado a la lista de productos creados.
+                                        createdProducts.Add(new ResponseCreacion
                                         {
                                             IDJumpseller = 0,
                                             Sku = product.product.sku,
@@ -142,14 +143,14 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                     }
                                 }
                             }
-                            else // Si la conversión de la imagen a Base64 falla.
+                            else
                             {
-                                var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={loginShimano}&authtoken={tokenShimano}", product); // Realiza una solicitud POST para crear el producto en JumpSeller sin imagen.
-                                if (resultPostProduct.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                                var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={loginShimano}&authtoken={tokenShimano}", product);
+                                if (resultPostProduct.IsSuccessStatusCode)
                                 {
-                                    string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
-                                    ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano); // Deserializa la respuesta del producto.
-                                    createdProducts.Add(new ResponseCreacion // Agrega el producto creado a la lista de productos creados.
+                                    string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                    ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                    createdProducts.Add(new ResponseCreacion
                                     {
                                         IDJumpseller = responseProductShimanoData.product.id,
                                         Sku = responseProductShimanoData.product.sku,
@@ -158,9 +159,9 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                         Status = "Creado"
                                     });
                                 }
-                                else // Si la solicitud para crear el producto falla.
+                                else
                                 {
-                                    createdProducts.Add(new ResponseCreacion // Agrega el producto no creado a la lista de productos creados.
+                                    createdProducts.Add(new ResponseCreacion
                                     {
                                         IDJumpseller = 0,
                                         Sku = product.product.sku,
@@ -175,75 +176,202 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 }
                 else
                 {
-                    return Results.BadRequest("No existen productos para crear"); //Devuelve error Si no el count de articulos es = 0
+                    return Results.BadRequest("No existen productos para crear");
                 }
-                return Results.Ok(createdProducts); // Devuelve la lista de productos creados.
+                return Results.Ok(createdProducts);
             }
-            catch (Exception ex) // Captura cualquier excepción que ocurra.
+            catch (Exception ex)
             {
-                return Results.BadRequest(ex.Message); // Devuelve un mensaje de error.
+                return Results.BadRequest(ex.Message);
             }
         }
-        private static async Task<IResult> UpdateProductos(IConfiguration configuration)
+        private static async Task<IResult> AndestoJumpProductos(IConfiguration configuration, IProductosData data)
         {
             try
             {
-                MainServices service = new MainServices(); // Crea una instancia de MainServices.
-                string urlProducts = "v1/products.json"; // Define la URL para obtener productos.
-                string urlUpdateProducts = "v1/products/"; // Define la URL para Updatear productos.
-                string urlCount = "v1/products/count.json"; // Define la URL para obtener el conteo de productos.
-                string login = "f23cb72f86246e387cd40d892a508f59"; // Define el login.
-                string token = "edc68361f51feae4f871ae23eba581ea"; // Define el token.
-                List<ProductsModel> totalProductsList = new(); // Crea una lista para almacenar todos los productos.
-                List<ResponseCreacion> createdProducts = new(); // Crea una lista para almacenar los productos creados.
-                List<dynamic> ListaAndes = new(); // TODO: Definir campos para el modelo de los articulos andes a consultar
+                MainServices service = new MainServices();
+                string urlProducts = "v1/products.json";
+                string urlCount = "v1/products/count.json";
+                string urlImgbbPost = "1/upload";
+                string login = "b2096c5eda7370c1eee69c9de9c15883";
+                string token = "e854b7ca1b3877825d8ee522d70ab608";
+                string imgbbToken = "5badf53104d4acbe92cacf73cc8b381d";
+                List<dynamic> totalProductsList = new();
+                List<ResponseCreacion> createdProducts = new();
 
-                //TODO: COnsultar Articulos ANdes Con sus respectivos datos Y guardar en lista
-
-
-                //TODO: CREAR TODA LA LOGICA PARA UPDATEAR ARTICULOS EN JUMPSELLER
-
-                var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={login}&authtoken={token}"); // Realiza una solicitud GET para obtener el conteo de productos.
-                if (resultCount.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                if (totalProductsList.Count > 0)
                 {
-                    string responseCount = await resultCount.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
-                    CountModel? productCount = JsonConvert.DeserializeObject<CountModel>(responseCount); // Deserializa el conteo de productos.
-                    if (productCount != null) // Verifica si el conteo de productos no es nulo.
+                    foreach (var product in totalProductsList)
                     {
-                        int totalPages = (int)Math.Ceiling((decimal)productCount.count / 100); // Calcula el número total de páginas.
-                        for (int i = 1; i <= totalPages; i++) // Itera sobre cada página.
+                        service = new MainServices();
+                        var formData = new MultipartFormDataContent();
+                        string imageBase64 = await ConvertImageUrlToBase64($"https://imgs.andesindustrial.cl/fotos/articulos/{product.IDartiuclo}.jpg");
+                        if (imageBase64 != "error")
                         {
-                            var result = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlProducts}?login={login}&authtoken={token}&limit=100&page={i + 1}"); // Realiza una solicitud GET para obtener productos.
-                            if (result.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                            formData.Add(new StringContent(imageBase64), "image");
+                            var resultImgBB = await MainServices.ImgBB.HttpClientInstance.PostAsync($"{urlImgbbPost}?&key={imgbbToken}", formData);
+                            if (resultImgBB.IsSuccessStatusCode)
                             {
-                                string responseContent = await result.Content.ReadAsStringAsync(); // Lee el contenido de la respuesta.
-                                List<ProductsModel>? response = JsonConvert.DeserializeObject<List<ProductsModel>>(responseContent); // Deserializa la lista de productos.
-                                if (response != null && response.Count > 0) // Verifica si la respuesta no es nula y contiene productos.
+                                string responseImgbb = await resultImgBB.Content.ReadAsStringAsync();
+                                ResponseImgBBModel? responseImgbbData = JsonConvert.DeserializeObject<ResponseImgBBModel>(responseImgbb);
+                                product.product.images.FirstOrDefault().url = responseImgbbData.data.url;
+                                product.product.images.FirstOrDefault().id = 0;
+                                product.product.id = 0;
+                                var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={login}&authtoken={token}", (ProductsModel)product);
+                                if (resultPostProduct.IsSuccessStatusCode)
                                 {
-                                    totalProductsList.AddRange(response); // Agrega los productos a la lista total.
+                                    string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                    ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                    string createArticleUrl = $"v1/products/{responseProductShimanoData?.product.id}/images.json";
+                                    ImgJumpsellerModel imgPost = new ImgJumpsellerModel()
+                                    {
+                                        image = new ImagePost
+                                        {
+                                            url = product.product.images.FirstOrDefault().url,
+                                            position = product.product.images.FirstOrDefault().position
+                                        }
+                                    };
+                                    var resultPostProductImgShimano = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ImgJumpsellerModel>($"{createArticleUrl}?login={login}&authtoken={token}", imgPost);
+                                    if (resultPostProductImgShimano.IsSuccessStatusCode)
+                                    {
+                                        string responseProductShimanoImg = await resultPostProductImgShimano.Content.ReadAsStringAsync();
+                                        ImgJumpsellerModel? responseProductShimanoImgData = JsonConvert.DeserializeObject<ImgJumpsellerModel>(responseProductShimanoImg);
+                                        createdProducts.Add(new ResponseCreacion
+                                        {
+                                            IDJumpseller = responseProductShimanoData.product.id,
+                                            Sku = responseProductShimanoData.product.sku,
+                                            NombreArticulo = responseProductShimanoData.product.name,
+                                            SiImg = "si",
+                                            Status = "Creado"
+                                        });
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync($"{urlProducts}?login={login}&authtoken={token}", (ProductsModel)product);
+                                if (resultPostProduct.IsSuccessStatusCode)
+                                {
+                                    string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                    ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                    createdProducts.Add(new ResponseCreacion
+                                    {
+                                        IDJumpseller = responseProductShimanoData.product.id,
+                                        Sku = responseProductShimanoData.product.sku,
+                                        NombreArticulo = responseProductShimanoData.product.name,
+                                        SiImg = "No",
+                                        Status = "Creado"
+                                    });
+                                }
+                                else
+                                {
+                                    createdProducts.Add(new ResponseCreacion
+                                    {
+                                        IDJumpseller = 0,
+                                        Sku = product.product.sku,
+                                        NombreArticulo = product.product.name,
+                                        SiImg = "No",
+                                        Status = "No Creado"
+                                    });
+                                }
+                            }
+                        }
+                        else
+                        {
+                            var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={login}&authtoken={token}", (ProductsModel)product);
+                            if (resultPostProduct.IsSuccessStatusCode)
+                            {
+                                string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                createdProducts.Add(new ResponseCreacion
+                                {
+                                    IDJumpseller = responseProductShimanoData.product.id,
+                                    Sku = responseProductShimanoData.product.sku,
+                                    NombreArticulo = responseProductShimanoData.product.name,
+                                    SiImg = "No",
+                                    Status = "Creado"
+                                });
+                            }
+                            else
+                            {
+                                createdProducts.Add(new ResponseCreacion
+                                {
+                                    IDJumpseller = 0,
+                                    Sku = product.product.sku,
+                                    NombreArticulo = product.product.name,
+                                    SiImg = "No",
+                                    Status = "No Creado"
+                                });
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    return Results.BadRequest("No existen productos para crear");
+                }
+                return Results.Ok(createdProducts);
+
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(ex.Message);
+            }
+        }
+        private static async Task<IResult> UpdateProductos(IConfiguration configuration, IProductosData data)
+        {
+            try
+            {
+                MainServices service = new MainServices();
+                string urlProducts = "v1/products.json";
+                string urlUpdateProducts = "v1/products/";
+                string urlCount = "v1/products/count.json";
+                string login = "f23cb72f86246e387cd40d892a508f59";
+                string token = "edc68361f51feae4f871ae23eba581ea";
+                List<ProductsModel> totalProductsList = new();
+                List<ResponseCreacion> createdProducts = new();
+                List<dynamic> ListaAndes = new();
+
+                var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={login}&authtoken={token}");
+                if (resultCount.IsSuccessStatusCode)
+                {
+                    string responseCount = await resultCount.Content.ReadAsStringAsync();
+                    CountModel? productCount = JsonConvert.DeserializeObject<CountModel>(responseCount);
+                    if (productCount != null)
+                    {
+                        int totalPages = (int)Math.Ceiling((decimal)productCount.count / 100);
+                        for (int i = 1; i <= totalPages; i++)
+                        {
+                            var result = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlProducts}?login={login}&authtoken={token}&limit=100&page={i + 1}");
+                            if (result.IsSuccessStatusCode)
+                            {
+                                string responseContent = await result.Content.ReadAsStringAsync();
+                                List<ProductsModel>? response = JsonConvert.DeserializeObject<List<ProductsModel>>(responseContent);
+                                if (response != null && response.Count > 0)
+                                {
+                                    totalProductsList.AddRange(response);
                                 }
                             }
                         }
                     }
                     foreach (var item in totalProductsList)
                     {
-                        service = new MainServices(); // actualiza la instancia de MainServices.
+                        service = new MainServices();
 
-                        //TODO: CREAR TODA LA LOGICA PARA UPDATEAR ARTICULOS EN JUMPSELLER (cuando tenga disponible la toma de datos de andes)
-                        if (ListaAndes.Find(x => x.sku == item.product.sku).stock > 0)// Verifica si el stock es mayor a 0.
+                        if (ListaAndes.Find(x => x.sku == item.product.sku).stock > 0)
                         {
-                            item.product.stock = ListaAndes.Find(x => x.sku == item.product.sku).stock;//modifica stock
-                            item.product.status = "available";// lo pone disponible
+                            item.product.stock = ListaAndes.Find(x => x.sku == item.product.sku).stock;
+                            item.product.status = "available";
                         }
-                        else if (ListaAndes.Find(x => x.sku == item.product.sku).stock == 0) // Verifica si el stock es mayor a 0.
+                        else if (ListaAndes.Find(x => x.sku == item.product.sku).stock == 0)
                         {
-                            item.product.stock = ListaAndes.Find(x => x.sku == item.product.sku).stock;//modifica stock
-                            item.product.status = "disabled";// lo pone deshabilitado
+                            item.product.stock = ListaAndes.Find(x => x.sku == item.product.sku).stock;
+                            item.product.status = "disabled";
                         }
-                        var ResponsePutPRoducto = await MainServices.JumpSeller.HttpClientInstance.PutAsJsonAsync($"{urlUpdateProducts}{item.product.id}.json?login={login}&authtoken={token}", item); // Realiza una solicitud PUT para Actualizar el producto en JumpSeller.
-                        if (ResponsePutPRoducto.IsSuccessStatusCode) // Verifica si la solicitud fue exitosa.
+                        var ResponsePutPRoducto = await MainServices.JumpSeller.HttpClientInstance.PutAsJsonAsync($"{urlUpdateProducts}{item.product.id}.json?login={login}&authtoken={token}", item);
+                        if (ResponsePutPRoducto.IsSuccessStatusCode)
                         {
-                            createdProducts.Add(new ResponseCreacion // Agrega el producto Actualizado a la lista de productos creados.
+                            createdProducts.Add(new ResponseCreacion
                             {
                                 IDJumpseller = item.product.id,
                                 Sku = item.product.sku,
@@ -253,8 +381,9 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                             });
 
                         }
-                        else {
-                            createdProducts.Add(new ResponseCreacion // Agrega el producto Actualizado a la lista de productos creados.
+                        else
+                        {
+                            createdProducts.Add(new ResponseCreacion
                             {
                                 IDJumpseller = item.product.id,
                                 Sku = item.product.sku,
@@ -263,48 +392,43 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                 Status = "No Actualizado"
                             });
                         }
-                        //TODO: Validar Errores para la actualizacion de Artiuclos en Jumpseller 805636
                     }
                 }
                 else
                 {
-                    return Results.BadRequest("No existen productos para crear"); //Devuelve error Si no el count de articulos es == 0
+                    return Results.BadRequest("No existen productos para crear");
                 }
 
-                return Results.Ok("Updated"); // Devuelve un mensaje de error.
+                return Results.Ok("Updated");
             }
-            catch (Exception ex) // Captura cualquier excepción que ocurra.
+            catch (Exception ex)
             {
-                return Results.BadRequest(ex.Message); // Devuelve un mensaje de error.
+                return Results.BadRequest(ex.Message);
             }
         }
-        static async Task<string> ConvertImageUrlToBase64(string imageUrl, long maxSizeInBytes = 32 * 1024 * 1024) // Método para convertir una URL de imagen a Base64.
+        static async Task<string> ConvertImageUrlToBase64(string imageUrl, long maxSizeInBytes = 32 * 1024 * 1024)
         {
             try
             {
-                using (HttpClient client = new HttpClient()) // Crea una instancia de HttpClient.
+                using (HttpClient client = new HttpClient())
                 {
-                    // Descargar la imagen como un arreglo de bytes
-                    byte[] imageBytes = await client.GetByteArrayAsync(imageUrl); // Descarga la imagen como un arreglo de bytes.
+                    byte[] imageBytes = await client.GetByteArrayAsync(imageUrl);
 
-                    // Verificar el tamaño de la imagen
-                    long imageSizeInBytes = imageBytes.Length; // Obtiene el tamaño de la imagen en bytes.
+                    long imageSizeInBytes = imageBytes.Length;
 
-                    // Si la imagen es demasiado grande, devolver un error
-                    if (imageSizeInBytes > maxSizeInBytes) // Verifica si la imagen es demasiado grande.
+                    if (imageSizeInBytes > maxSizeInBytes)
                     {
-                        return "error"; // Devuelve un error si la imagen es demasiado grande.
+                        return "error";
                     }
 
-                    // Convertir los bytes a Base64
-                    string base64String = Convert.ToBase64String(imageBytes); // Convierte los bytes a Base64.
+                    string base64String = Convert.ToBase64String(imageBytes);
 
-                    return base64String; // Devuelve la cadena en Base64.
+                    return base64String;
                 }
             }
-            catch (Exception ex) // Captura cualquier excepción que ocurra.
+            catch (Exception ex)
             {
-                return "error"; // Devuelve un error si ocurre una excepción.
+                return "error";
             }
         }
     }
