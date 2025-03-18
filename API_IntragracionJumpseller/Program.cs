@@ -14,9 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 
 var contactInfo = new OpenApiContact()
 {
-    Name = "Antonio Caro",
-    Email = "acaro@andesindustrial.cl",
-    Url = new Uri("https://www.andesindutrial.cl")
+    Name = "Frederick Cid",
+    Email = "fcid@andesindustrial.cl",
+    Url = new Uri("https://github.com/Rodkaaaa")
 };
 
 var License = new OpenApiLicense()

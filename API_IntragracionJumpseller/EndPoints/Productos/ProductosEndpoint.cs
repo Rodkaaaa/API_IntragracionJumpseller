@@ -3,6 +3,7 @@ using DataAccess.Models.ProductAndes;
 using DataAccess.Models.Products;
 using DataAccess.Shared.Services;
 using Newtonsoft.Json;
+using System.Collections.Generic;
 
 namespace API_IntragracionJumpseller.EndPoints.Productos
 {
@@ -198,209 +199,258 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 string token = "487dab96c7a1689408b47797bbef4103";
                 string imgbbToken = "365f7b8b3a47fb52bee95bb9aa4a3989";
                 List<ProductAndesModel> totalProductsList = new();
+                List<ProductsModel> totalProductsListJumseller = new();
                 List<ResponseCreacion> createdProducts = new();
                 ProductsModel productPost = new() { };
 
 
+
                 var ProductosAndes = await data.GetProductosAndes();
                 totalProductsList = ProductosAndes.ToList();
-                if (totalProductsList.Count > 0)
+                var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={login}&authtoken={token}");
+                if (resultCount.IsSuccessStatusCode)
                 {
-                    foreach (var product in totalProductsList)
+                    string responseCount = await resultCount.Content.ReadAsStringAsync();
+                    CountModel? productCount = JsonConvert.DeserializeObject<CountModel>(responseCount);
+                    if (productCount != null && productCount.count != 0)
                     {
-                        service = new MainServices();
-                        var formData = new MultipartFormDataContent();
-                        string imageBase64 = await ConvertImageUrlToBase64($"https://imgs.andesindustrial.cl/fotos/articulos/{product.IDArticulo}.jpg");
-                        if (imageBase64 != "error")
+                        int totalPages = (int)Math.Ceiling((decimal)productCount.count / 100);
+                        for (int i = 1; i <= totalPages; i++)
                         {
-                            formData.Add(new StringContent(imageBase64), "image");
-                            var resultImgBB = await MainServices.ImgBB.HttpClientInstance.PostAsync($"{urlImgbbPost}?&key={imgbbToken}", formData);
-                            if (resultImgBB.IsSuccessStatusCode)
+                            var result = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlProducts}?login={login}&authtoken={token}&limit=100&page={i}");
+                            if (result.IsSuccessStatusCode)
                             {
-
-                                string responseImgbb = await resultImgBB.Content.ReadAsStringAsync();
-                                ResponseImgBBModel? responseImgbbData = JsonConvert.DeserializeObject<ResponseImgBBModel>(responseImgbb);
-
-                                productPost = new() { product = new Product { categories = new List<Category>() } };
-                                productPost.product.name = product.Nombre;
-                                productPost.product.page_title = product.NombreWeb;
-                                productPost.product.meta_description = product.Descripcion;
-                                productPost.product.description = String.IsNullOrEmpty(product.TextoWeb) ? product.Descripcion : product.TextoWeb;
-                                productPost.product.type = "physical";
-                                productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
-                                productPost.product.sku = product.IDArticulo;
-                                productPost.product.stock = product.Stock;
-                                productPost.product.barcode = product.IDArticulo;
-                                productPost.product.brand = product.Marca;
-                                productPost.product.status = product.Stock > 0 ? "available" : "not-available";
-                                productPost.product.google_product_category = product.Grupo;
-                                if (product.IDGrupoAgrupa > 0)
+                                string responseContent = await result.Content.ReadAsStringAsync();
+                                List<ProductsModel>? response = JsonConvert.DeserializeObject<List<ProductsModel>>(responseContent);
+                                if (response != null && response.Count > 0)
                                 {
-                                    productPost.product.categories.Add(new Category
-                                    {
-                                        id = product.IDGrupoAgrupa,
-                                        name = product.GrupoAgrupa,
-                                        parent_id = 0,
-                                        permalink = product.GrupoAgrupa
-                                    });
+                                    totalProductsListJumseller.AddRange(response);
                                 }
-                                if (product.IDCategoriaAgrupa > 0)
+                            }
+                        }
+                    }
+
+                    if (totalProductsList.Count > 0)
+                    {
+                        foreach (var product in totalProductsList)
+                        {
+                            if (!totalProductsListJumseller.Exists(x => x.product.sku == product.IDArticulo))
+                            {
+                                service = new MainServices();
+                                var formData = new MultipartFormDataContent();
+                                string imageBase64 = await ConvertImageUrlToBase64($"https://imgs.andesindustrial.cl/fotos/articulos/{product.IDArticulo}.jpg");
+                                if (imageBase64 != "error")
                                 {
-                                    productPost.product.categories.Add(new Category
+                                    formData.Add(new StringContent(imageBase64), "image");
+                                    var resultImgBB = await MainServices.ImgBB.HttpClientInstance.PostAsync($"{urlImgbbPost}?&key={imgbbToken}", formData);
+                                    if (resultImgBB.IsSuccessStatusCode)
                                     {
-                                        id = product.IDCategoriaAgrupa,
-                                        name = product.CategoriaAgrupa,
-                                        parent_id = 0,
-                                        permalink = product.CategoriaAgrupa
-                                    });
-                                }
-                                var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={login}&authtoken={token}", productPost);
-                                if (resultPostProduct.IsSuccessStatusCode)
-                                {
-                                    string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
-                                    ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
-                                    string createArticleUrl = $"v1/products/{responseProductShimanoData?.product.id}/images.json";
-                                    ImgJumpsellerModel imgPost = new ImgJumpsellerModel()
-                                    {
-                                        image = new ImagePost
+
+                                        string responseImgbb = await resultImgBB.Content.ReadAsStringAsync();
+                                        ResponseImgBBModel? responseImgbbData = JsonConvert.DeserializeObject<ResponseImgBBModel>(responseImgbb);
+
+                                        productPost = new() { product = new Product { categories = new List<Category>() } };
+                                        productPost.product.name = product.Nombre;
+                                        productPost.product.page_title = product.NombreWeb;
+                                        productPost.product.meta_description = product.Descripcion;
+                                        productPost.product.description = String.IsNullOrEmpty(product.TextoWeb) ? product.Descripcion : product.TextoWeb;
+                                        productPost.product.type = "physical";
+                                        productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
+                                        productPost.product.sku = product.IDArticulo;
+                                        productPost.product.stock = product.Stock;
+                                        productPost.product.barcode = product.IDArticulo;
+                                        productPost.product.brand = product.Marca;
+                                        productPost.product.status = product.Stock > 0 ? "available" : "not-available";
+                                        productPost.product.google_product_category = product.Grupo;
+                                        if (product.IDGrupoAgrupa > 0)
                                         {
-                                            url = responseImgbbData.data.url,
-                                            position = 0
+                                            productPost.product.categories.Add(new Category
+                                            {
+                                                id = product.IDGrupoAgrupa,
+                                                name = product.GrupoAgrupa,
+                                                parent_id = 0,
+                                                permalink = product.GrupoAgrupa
+                                            });
                                         }
-                                    };
-                                    var resultPostProductImgShimano = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ImgJumpsellerModel>($"{createArticleUrl}?login={login}&authtoken={token}", imgPost);
-                                    if (resultPostProductImgShimano.IsSuccessStatusCode)
+                                        if (product.IDCategoriaAgrupa > 0)
+                                        {
+                                            productPost.product.categories.Add(new Category
+                                            {
+                                                id = product.IDCategoriaAgrupa,
+                                                name = product.CategoriaAgrupa,
+                                                parent_id = 0,
+                                                permalink = product.CategoriaAgrupa
+                                            });
+                                        }
+                                        var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={login}&authtoken={token}", productPost);
+                                        if (resultPostProduct.IsSuccessStatusCode)
+                                        {
+                                            string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                            ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                            string createArticleUrl = $"v1/products/{responseProductShimanoData?.product.id}/images.json";
+                                            ImgJumpsellerModel imgPost = new ImgJumpsellerModel()
+                                            {
+                                                image = new ImagePost
+                                                {
+                                                    url = responseImgbbData.data.url,
+                                                    position = 0
+                                                }
+                                            };
+                                            var resultPostProductImgShimano = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ImgJumpsellerModel>($"{createArticleUrl}?login={login}&authtoken={token}", imgPost);
+                                            if (resultPostProductImgShimano.IsSuccessStatusCode)
+                                            {
+                                                string responseProductShimanoImg = await resultPostProductImgShimano.Content.ReadAsStringAsync();
+                                                ImgJumpsellerModel? responseProductShimanoImgData = JsonConvert.DeserializeObject<ImgJumpsellerModel>(responseProductShimanoImg);
+                                                createdProducts.Add(new ResponseCreacion
+                                                {
+                                                    IDJumpseller = responseProductShimanoData.product.id,
+                                                    Sku = responseProductShimanoData.product.sku,
+                                                    NombreArticulo = responseProductShimanoData.product.name,
+                                                    SiImg = "si",
+                                                    Status = "Creado"
+                                                });
+                                            }
+                                        }
+                                        else
+                                        {
+                                            //Toma de errores de jumpseller
+                                            string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                            ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                            createdProducts.Add(new ResponseCreacion
+                                            {
+                                                IDJumpseller = 0,
+                                                Sku = product.IDArticulo,
+                                                NombreArticulo = product.Nombre,
+                                                SiImg = "No",
+                                                Status = responseProductShimano
+                                            });
+                                        }
+                                    }
+                                    else
                                     {
-                                        string responseProductShimanoImg = await resultPostProductImgShimano.Content.ReadAsStringAsync();
-                                        ImgJumpsellerModel? responseProductShimanoImgData = JsonConvert.DeserializeObject<ImgJumpsellerModel>(responseProductShimanoImg);
+                                        productPost = new() { product = new Product { categories = new List<Category>() } };
+                                        productPost.product.name = product.Nombre;
+                                        productPost.product.page_title = product.NombreWeb;
+                                        productPost.product.meta_description = product.Descripcion;
+                                        productPost.product.description = String.IsNullOrEmpty(product.TextoWeb) ? product.Descripcion : product.TextoWeb;
+                                        productPost.product.type = "physical";
+                                        productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
+                                        productPost.product.sku = product.IDArticulo;
+                                        productPost.product.stock = product.Stock;
+                                        productPost.product.barcode = product.IDArticulo;
+                                        productPost.product.brand = product.Marca;
+                                        productPost.product.status = product.Stock > 0 ? "available" : "not-available";
+                                        productPost.product.google_product_category = product.Grupo;
+                                        if (product.IDGrupoAgrupa > 0)
+                                        {
+                                            productPost.product.categories.Add(new Category
+                                            {
+                                                id = product.IDGrupoAgrupa,
+                                                name = product.GrupoAgrupa,
+                                                parent_id = 0,
+                                                permalink = product.GrupoAgrupa
+                                            });
+                                        }
+                                        if (product.IDCategoriaAgrupa > 0)
+                                        {
+                                            productPost.product.categories.Add(new Category
+                                            {
+                                                id = product.IDCategoriaAgrupa,
+                                                name = product.CategoriaAgrupa,
+                                                parent_id = 0,
+                                                permalink = product.CategoriaAgrupa
+                                            });
+                                        }
+
+                                        var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync($"{urlProducts}?login={login}&authtoken={token}", productPost);
+                                        if (resultPostProduct.IsSuccessStatusCode)
+                                        {
+                                            string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                            ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                            createdProducts.Add(new ResponseCreacion
+                                            {
+                                                IDJumpseller = responseProductShimanoData.product.id,
+                                                Sku = responseProductShimanoData.product.sku,
+                                                NombreArticulo = responseProductShimanoData.product.name,
+                                                SiImg = "No",
+                                                Status = "Creado"
+                                            });
+                                        }
+                                        else
+                                        {
+                                            createdProducts.Add(new ResponseCreacion
+                                            {
+                                                IDJumpseller = 0,
+                                                Sku = product.IDArticulo,
+                                                NombreArticulo = product.Nombre,
+                                                SiImg = "No",
+                                                Status = "No Creado"
+                                            });
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    productPost = new() { product = new Product { categories = new List<Category>() } };
+                                    productPost.product.name = product.Nombre;
+                                    productPost.product.page_title = product.NombreWeb;
+                                    productPost.product.meta_description = product.Descripcion;
+                                    productPost.product.description = String.IsNullOrEmpty(product.TextoWeb) ? product.Descripcion : product.TextoWeb;
+                                    productPost.product.type = "physical";
+                                    productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
+                                    productPost.product.sku = product.IDArticulo;
+                                    productPost.product.stock = product.Stock;
+                                    productPost.product.barcode = product.IDArticulo;
+                                    productPost.product.brand = product.Marca;
+                                    productPost.product.status = product.Stock > 0 ? "available" : "not-available";
+                                    productPost.product.google_product_category = product.Grupo;
+                                    if (product.IDGrupoAgrupa > 0)
+                                    {
+                                        productPost.product.categories.Add(new Category
+                                        {
+                                            id = product.IDGrupoAgrupa,
+                                            name = product.GrupoAgrupa,
+                                            parent_id = 0,
+                                            permalink = product.GrupoAgrupa
+                                        });
+                                    }
+                                    if (product.IDCategoriaAgrupa > 0)
+                                    {
+                                        productPost.product.categories.Add(new Category
+                                        {
+                                            id = product.IDCategoriaAgrupa,
+                                            name = product.CategoriaAgrupa,
+                                            parent_id = 0,
+                                            permalink = product.CategoriaAgrupa
+                                        });
+                                    }
+
+                                    var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={login}&authtoken={token}", productPost);
+                                    if (resultPostProduct.IsSuccessStatusCode)
+                                    {
+                                        string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                        ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
                                         createdProducts.Add(new ResponseCreacion
                                         {
                                             IDJumpseller = responseProductShimanoData.product.id,
                                             Sku = responseProductShimanoData.product.sku,
                                             NombreArticulo = responseProductShimanoData.product.name,
-                                            SiImg = "si",
+                                            SiImg = "No",
                                             Status = "Creado"
                                         });
                                     }
-                                }
-                                else
-                                {
-                                    string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
-                                    ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
-                                }
-                            }
-                            else
-                            {
-                                productPost = new() { product = new Product { categories = new List<Category>() } };
-                                productPost.product.name = product.Nombre;
-                                productPost.product.page_title = product.NombreWeb;
-                                productPost.product.meta_description = product.Descripcion;
-                                productPost.product.description = String.IsNullOrEmpty(product.TextoWeb)? product.Descripcion: product.TextoWeb;
-                                productPost.product.type = "physical";
-                                productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
-                                productPost.product.sku = product.IDArticulo;
-                                productPost.product.stock = product.Stock;
-                                productPost.product.barcode = product.IDArticulo;
-                                productPost.product.brand = product.Marca;
-                                productPost.product.status = product.Stock > 0 ? "available" : "not-available";
-                                productPost.product.google_product_category = product.Grupo;
-                                if (product.IDGrupoAgrupa > 0)
-                                {
-                                    productPost.product.categories.Add(new Category
+                                    else
                                     {
-                                        id = product.IDGrupoAgrupa,
-                                        name = product.GrupoAgrupa,
-                                        parent_id = 0,
-                                        permalink = product.GrupoAgrupa
-                                    });
+                                        createdProducts.Add(new ResponseCreacion
+                                        {
+                                            IDJumpseller = 0,
+                                            Sku = product.IDArticulo,
+                                            NombreArticulo = product.Nombre,
+                                            SiImg = "No",
+                                            Status = "No Creado"
+                                        });
+                                    }
                                 }
-                                if (product.IDCategoriaAgrupa > 0)
-                                {
-                                    productPost.product.categories.Add(new Category
-                                    {
-                                        id = product.IDCategoriaAgrupa,
-                                        name = product.CategoriaAgrupa,
-                                        parent_id = 0,
-                                        permalink = product.CategoriaAgrupa
-                                    });
-                                }
-
-                                var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync($"{urlProducts}?login={login}&authtoken={token}", productPost);
-                                if (resultPostProduct.IsSuccessStatusCode)
-                                {
-                                    string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
-                                    ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
-                                    createdProducts.Add(new ResponseCreacion
-                                    {
-                                        IDJumpseller = responseProductShimanoData.product.id,
-                                        Sku = responseProductShimanoData.product.sku,
-                                        NombreArticulo = responseProductShimanoData.product.name,
-                                        SiImg = "No",
-                                        Status = "Creado"
-                                    });
-                                }
-                                else
-                                {
-                                    createdProducts.Add(new ResponseCreacion
-                                    {
-                                        IDJumpseller = 0,
-                                        Sku = product.IDArticulo,
-                                        NombreArticulo = product.Nombre,
-                                        SiImg = "No",
-                                        Status = "No Creado"
-                                    });
-                                }
-                            }
-                        }
-                        else
-                        {
-                            productPost = new() { product = new Product { categories = new List<Category>() } };
-                            productPost.product.name = product.Nombre;
-                            productPost.product.page_title = product.NombreWeb;
-                            productPost.product.meta_description = product.Descripcion;
-                            productPost.product.description = String.IsNullOrEmpty(product.TextoWeb) ? product.Descripcion : product.TextoWeb;
-                            productPost.product.type = "physical";
-                            productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
-                            productPost.product.sku = product.IDArticulo;
-                            productPost.product.stock = product.Stock;
-                            productPost.product.barcode = product.IDArticulo;
-                            productPost.product.brand = product.Marca;
-                            productPost.product.status = product.Stock > 0 ? "available" : "not-available";
-                            productPost.product.google_product_category = product.Grupo;
-                            if (product.IDGrupoAgrupa > 0)
-                            {
-                                productPost.product.categories.Add(new Category
-                                {
-                                    id = product.IDGrupoAgrupa,
-                                    name = product.GrupoAgrupa,
-                                    parent_id = 0,
-                                    permalink = product.GrupoAgrupa
-                                });
-                            }
-                            if (product.IDCategoriaAgrupa > 0)
-                            {
-                                productPost.product.categories.Add(new Category
-                                {
-                                    id = product.IDCategoriaAgrupa,
-                                    name = product.CategoriaAgrupa,
-                                    parent_id = 0,
-                                    permalink = product.CategoriaAgrupa
-                                });
-                            }
-
-                            var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={login}&authtoken={token}", productPost);
-                            if (resultPostProduct.IsSuccessStatusCode)
-                            {
-                                string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
-                                ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
-                                createdProducts.Add(new ResponseCreacion
-                                {
-                                    IDJumpseller = responseProductShimanoData.product.id,
-                                    Sku = responseProductShimanoData.product.sku,
-                                    NombreArticulo = responseProductShimanoData.product.name,
-                                    SiImg = "No",
-                                    Status = "Creado"
-                                });
                             }
                             else
                             {
@@ -410,18 +460,18 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                     Sku = product.IDArticulo,
                                     NombreArticulo = product.Nombre,
                                     SiImg = "No",
-                                    Status = "No Creado"
+                                    Status = "Existe"
                                 });
                             }
                         }
                     }
-                }
-                else
-                {
-                    return Results.BadRequest("No existen productos para crear");
+                    else
+                    {
+                        return Results.BadRequest("No existen productos para crear");
+                    }
+
                 }
                 return Results.Ok(createdProducts);
-
             }
             catch (Exception ex)
             {
@@ -444,53 +494,72 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
 
                 var ProductosAndes = await data.GetProductosAndes();
                 ListaAndes = ProductosAndes.ToList();
-
-                var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={login}&authtoken={token}");
-                if (resultCount.IsSuccessStatusCode)
+                if (ListaAndes.Count() > 0)
                 {
-                    string responseCount = await resultCount.Content.ReadAsStringAsync();
-                    CountModel? productCount = JsonConvert.DeserializeObject<CountModel>(responseCount);
-                    if (productCount != null)
+
+
+                    var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={login}&authtoken={token}");
+                    if (resultCount.IsSuccessStatusCode)
                     {
-                        int totalPages = (int)Math.Ceiling((decimal)productCount.count / 100);
-                        for (int i = 1; i <= totalPages; i++)
+                        string responseCount = await resultCount.Content.ReadAsStringAsync();
+                        CountModel? productCount = JsonConvert.DeserializeObject<CountModel>(responseCount);
+                        if (productCount != null && productCount.count != 0)
                         {
-                            var result = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlProducts}?login={login}&authtoken={token}&limit=100&page={i}");
-                            if (result.IsSuccessStatusCode)
+                            int totalPages = (int)Math.Ceiling((decimal)productCount.count / 100);
+                            for (int i = 1; i <= totalPages; i++)
                             {
-                                string responseContent = await result.Content.ReadAsStringAsync();
-                                List<ProductsModel>? response = JsonConvert.DeserializeObject<List<ProductsModel>>(responseContent);
-                                if (response != null && response.Count > 0)
+                                var result = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlProducts}?login={login}&authtoken={token}&limit=100&page={i}");
+                                if (result.IsSuccessStatusCode)
                                 {
-                                    totalProductsList.AddRange(response);
+                                    string responseContent = await result.Content.ReadAsStringAsync();
+                                    List<ProductsModel>? response = JsonConvert.DeserializeObject<List<ProductsModel>>(responseContent);
+                                    if (response != null && response.Count > 0)
+                                    {
+                                        totalProductsList.AddRange(response);
+                                    }
                                 }
                             }
                         }
-                    }
-                    foreach (var item in totalProductsList)
-                    {
-                        if (ListaAndes.Any(x => x.IDArticulo == item.product.sku))
+                        else
                         {
-                            service = new MainServices();
-
-
-                            item.product.stock = ListaAndes.Find(x => x.IDArticulo == item.product.sku).Stock;
-                            item.product.status = ListaAndes.Find(x => x.IDArticulo == item.product.sku).Stock > 0 ? "available" : "not-available";
-
-
-
-                            var ResponsePutPRoducto = await MainServices.JumpSeller.HttpClientInstance.PutAsJsonAsync($"{urlUpdateProducts}{item.product.id}.json?login={login}&authtoken={token}", item);
-                            if (ResponsePutPRoducto.IsSuccessStatusCode)
+                            return Results.BadRequest("No hay articulos en Jumpseller para actualizar");
+                        }
+                        foreach (var item in totalProductsList)
+                        {
+                            if (ListaAndes.Any(x => x.IDArticulo == item.product.sku))
                             {
-                                createdProducts.Add(new ResponseCreacion
-                                {
-                                    IDJumpseller = item.product.id,
-                                    Sku = item.product.sku,
-                                    NombreArticulo = item.product.name,
-                                    SiImg = "",
-                                    Status = "Actualizado"
-                                });
+                                service = new MainServices();
 
+
+                                item.product.stock = ListaAndes.Find(x => x.IDArticulo == item.product.sku).Stock;
+                                item.product.status = ListaAndes.Find(x => x.IDArticulo == item.product.sku).Stock > 0 ? "available" : "not-available";
+
+
+
+                                var ResponsePutPRoducto = await MainServices.JumpSeller.HttpClientInstance.PutAsJsonAsync($"{urlUpdateProducts}{item.product.id}.json?login={login}&authtoken={token}", item);
+                                if (ResponsePutPRoducto.IsSuccessStatusCode)
+                                {
+                                    createdProducts.Add(new ResponseCreacion
+                                    {
+                                        IDJumpseller = item.product.id,
+                                        Sku = item.product.sku,
+                                        NombreArticulo = item.product.name,
+                                        SiImg = "",
+                                        Status = "Actualizado"
+                                    });
+
+                                }
+                                else
+                                {
+                                    createdProducts.Add(new ResponseCreacion
+                                    {
+                                        IDJumpseller = item.product.id,
+                                        Sku = item.product.sku,
+                                        NombreArticulo = item.product.name,
+                                        SiImg = "",
+                                        Status = "No Actualizado"
+                                    });
+                                }
                             }
                             else
                             {
@@ -500,26 +569,19 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                     Sku = item.product.sku,
                                     NombreArticulo = item.product.name,
                                     SiImg = "",
-                                    Status = "No Actualizado"
+                                    Status = "No existe Lista Andes"
                                 });
                             }
                         }
-                        else 
-                        {
-                            createdProducts.Add(new ResponseCreacion
-                            {
-                                IDJumpseller = item.product.id,
-                                Sku = item.product.sku,
-                                NombreArticulo = item.product.name,
-                                SiImg = "",
-                                Status = "No existe Lista Andes"
-                            });
-                        }
+                    }
+                    else
+                    {
+                        return Results.BadRequest("No existen productos para crear");
                     }
                 }
                 else
                 {
-                    return Results.BadRequest("No existen productos para crear");
+                    return Results.BadRequest("No Hay articulos de la lista andes");
                 }
 
                 return Results.Ok(createdProducts);
