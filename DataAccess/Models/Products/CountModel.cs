@@ -10,6 +10,7 @@ namespace DataAccess.Models.Products
     public class CountModel
     {
         public int count { get; set; }
+        public string status { get; set; }
     }
 
 }

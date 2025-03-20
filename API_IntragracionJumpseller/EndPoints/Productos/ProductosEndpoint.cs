@@ -29,6 +29,11 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
             async (IConfiguration configuration, IProductosData data) =>
             await UpdateProductos(configuration, data))
             .WithTags(controller);
+
+            app.MapGet($"{versionApi}/{controller}/test",
+            async (IConfiguration configuration, IProductosData data) =>
+            await GetCountJumpseller(configuration, data))
+            .WithTags(controller);
         }
 
         private static async Task<IResult> MigrateProductos(IConfiguration configuration)
@@ -39,11 +44,11 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 string urlProducts = "v1/products.json";
                 string urlCount = "v1/products/count.json";
                 string urlImgbbPost = "1/upload";
-                string loginPeru = "f23cb72f86246e387cd40d892a508f59";
-                string tokenPeru = "edc68361f51feae4f871ae23eba581ea";
-                string loginShimano = "b2096c5eda7370c1eee69c9de9c15883";
-                string tokenShimano = "e854b7ca1b3877825d8ee522d70ab608";
-                string imgbbToken = "5badf53104d4acbe92cacf73cc8b381d";
+                string loginPeru = configuration["TestJumpSeller:loginPeru"] ?? "";
+                string tokenPeru = configuration["TestJumpSeller:tokenPeru"] ?? "";
+                string loginShimano = configuration["TestJumpSeller:loginShimano"] ?? "";
+                string tokenShimano = configuration["TestJumpSeller:tokenShimano"] ?? "";
+                string imgbbToken = configuration["TestJumpSeller:imgbbToken"] ?? "";
                 List<ProductsModel> totalProductsList = new();
                 List<ResponseCreacion> createdProducts = new();
 
@@ -194,9 +199,9 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 string urlProducts = "v1/products.json";
                 string urlCount = "v1/products/count.json";
                 string urlImgbbPost = "1/upload";
-                string login = "99df3094a39f1e2c002810a510c6c8fe";
-                string token = "487dab96c7a1689408b47797bbef4103";
-                string imgbbToken = "365f7b8b3a47fb52bee95bb9aa4a3989";
+                string login = configuration["JumpSeller:LoginToken"] ?? "";
+                string token = configuration["JumpSeller:AuthToken"] ?? "";
+                string imgbbToken = configuration["JumpSeller:imgbbToken"] ?? "";
                 List<ProductAndesModel> totalProductsList = new();
                 List<ResponseCreacion> createdProducts = new();
                 ProductsModel productPost = new() { };
@@ -295,7 +300,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                 productPost.product.name = product.Nombre;
                                 productPost.product.page_title = product.NombreWeb;
                                 productPost.product.meta_description = product.Descripcion;
-                                productPost.product.description = String.IsNullOrEmpty(product.TextoWeb)? product.Descripcion: product.TextoWeb;
+                                productPost.product.description = String.IsNullOrEmpty(product.TextoWeb) ? product.Descripcion : product.TextoWeb;
                                 productPost.product.type = "physical";
                                 productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
                                 productPost.product.sku = product.IDArticulo;
@@ -436,8 +441,8 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 string urlProducts = "v1/products.json";
                 string urlUpdateProducts = "v1/products/";
                 string urlCount = "v1/products/count.json";
-                string login = "99df3094a39f1e2c002810a510c6c8fe";
-                string token = "487dab96c7a1689408b47797bbef4103";
+                string login = configuration["JumpSeller:LoginToken"] ?? "";
+                string token = configuration["JumpSeller:AuthToken"] ?? "";
                 List<ProductsModel> totalProductsList = new();
                 List<ResponseCreacion> createdProducts = new();
                 List<ProductAndesModel> ListaAndes = new();
@@ -504,7 +509,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                 });
                             }
                         }
-                        else 
+                        else
                         {
                             createdProducts.Add(new ResponseCreacion
                             {
@@ -528,6 +533,14 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
             {
                 return Results.BadRequest(ex.Message);
             }
+        }
+
+        private static async Task<IResult> GetCountJumpseller(IConfiguration configuration, IProductosData data)
+        {
+            string login = configuration["JumpSeller:LoginToken"] ?? "";
+            string auth = configuration["JumpSeller:AuthToken"] ?? "";
+            var response = await data.GetCountJumpseller(login, auth);
+            return Results.Ok(response.count);
         }
         static async Task<string> ConvertImageUrlToBase64(string imageUrl, long maxSizeInBytes = 32 * 1024 * 1024)
         {

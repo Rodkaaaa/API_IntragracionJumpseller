@@ -1,6 +1,9 @@
 ﻿using DataAccess.DbAccess;
 using DataAccess.Models.ProductAndes;
+using DataAccess.Models.Products;
+using DataAccess.Shared.Services;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,5 +42,30 @@ namespace DataAccess.Data.Productos
                IDAllGestEmpresa = IDAllGestEmpresa,
                IDEmpresa = IDEmpresa
            });
+
+        public async Task<CountModel> GetCountJumpseller(string login, string auth, string url = "v1/products/count.json")
+        {
+            var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{url}?login={login}&authtoken={auth}");
+            if (resultCount.IsSuccessStatusCode)
+            {
+                var content = await resultCount.Content.ReadAsStringAsync();
+                CountModel count = JsonConvert.DeserializeObject<CountModel>(content);
+                count.status = "Success";
+                return count;
+            }
+            else
+            {
+                var content = await resultCount.Content.ReadAsStringAsync();
+                string response = JsonConvert.DeserializeObject<string>(content) ?? "Error";
+
+                return new CountModel
+                    {
+                        status = response
+                    };
+
+
+            }
+        }
+
     }
 }
