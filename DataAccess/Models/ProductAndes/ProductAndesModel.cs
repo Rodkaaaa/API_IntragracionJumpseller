@@ -28,7 +28,7 @@ namespace DataAccess.Models.ProductAndes
         public string NombreWeb { get; set; }
         public int SiTextoWeb { get; set; }
         public string TextoWeb { get; set; }
-        public string Imagen { get; set; }
+        public List<productImages> Imagen { get; set; }
         public int IDMarca { get; set; }
         public string Marca { get; set; }
         public int IDEstado { get; set; }
@@ -49,5 +49,12 @@ namespace DataAccess.Models.ProductAndes
         public int IDSubCategoriaAgrupa { get; set; }
         public string SubCategoriaAgrupa { get; set; }
         public string Metros { get; set; }
+    }
+
+    public class productImages
+    {
+        public string Imagen { get; set; }
+        public string ToolTilp { get; set; }
+        
     }
 }
