@@ -6,15 +6,18 @@ using System.Threading.Tasks;
 
 namespace DataAccess.Models.ProductAndes
 {
+    using System;
+    using System.Collections.Generic;
+
     public class ProductAndesModel
     {
         public string IDArticulo { get; set; }
         public string Nombre { get; set; }
         public int PrecioVenta { get; set; }
         public int Stock { get; set; }
-        public float UltimoPrecioCosto { get; set; }
-        public float UltimoPrecioCompra { get; set; }
-        public string IDProveedor { get; set; }
+        public int UltimoPrecioCosto { get; set; }
+        public int UltimoPrecioCompra { get; set; }
+        public int IDProveedor { get; set; }
         public string Proveedor { get; set; }
         public int IDGrupoArticulo { get; set; }
         public string Grupo { get; set; }
@@ -28,7 +31,6 @@ namespace DataAccess.Models.ProductAndes
         public string NombreWeb { get; set; }
         public int SiTextoWeb { get; set; }
         public string TextoWeb { get; set; }
-        public string Imagen { get; set; }
         public int IDMarca { get; set; }
         public string Marca { get; set; }
         public int IDEstado { get; set; }
@@ -49,5 +51,15 @@ namespace DataAccess.Models.ProductAndes
         public int IDSubCategoriaAgrupa { get; set; }
         public string SubCategoriaAgrupa { get; set; }
         public string Metros { get; set; }
+        public string CategorizacionWeb { get; set; }
+
+        // Propiedad para manejar las imágenes
+        public List<ImagenArticulo> Imagen { get; set; } 
+    }
+
+    public class ImagenArticulo
+    {
+        public string Imagen { get; set; } // Ejemplo: "130068.jpg"
+        public string ToolTip { get; set; } // Nota: Corregí el nombre de "ToolTilp" a "ToolTip"
     }
 }

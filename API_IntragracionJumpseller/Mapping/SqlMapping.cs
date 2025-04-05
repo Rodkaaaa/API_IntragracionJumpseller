@@ -1,5 +1,6 @@
 ﻿
 using Dapper;
+using DataAccess.Models.ProductAndes;
 using DataAccess.Models.Products;
 using System.Reflection.Metadata;
 
@@ -13,6 +14,7 @@ public static class SqlMapping
         SqlMapper.AddTypeHandler(new JsonTypeHandler<List<Category>>());
         SqlMapper.AddTypeHandler(new JsonTypeHandler<List<Image>>());
         SqlMapper.AddTypeHandler(new JsonTypeHandler<List<Variant>>());
+        SqlMapper.AddTypeHandler(new JsonTypeHandler<List<ImagenArticulo>>());
        
     }
 }
