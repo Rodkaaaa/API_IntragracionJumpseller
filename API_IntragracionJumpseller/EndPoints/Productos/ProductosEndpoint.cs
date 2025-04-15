@@ -389,7 +389,9 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                             else
                                             {
                                                 string responseImgbb = await resultImgBB.Content.ReadAsStringAsync();
+                                                return Results.Problem($"Error Articulo {product.IDArticulo} - {responseImgbb}");
 
+                                                //TODO: intentar arreglar el problemas de las imagenes
                                                 productPost = new() { product = new Product { categories = new List<Category>() } };
                                                 productPost.product.name = product.Nombre;
                                                 productPost.product.page_title = product.NombreWeb;
