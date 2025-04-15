@@ -214,7 +214,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
 
 
 
-                var ProductosAndes = await data.GetProductosAndes(); 
+                var ProductosAndes = await data.GetProductosAndes();
                 totalProductsList = ProductosAndes.ToList();
                 var resultCount = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCount}?login={login}&authtoken={token}");
                 if (resultCount.IsSuccessStatusCode)
@@ -652,7 +652,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 List<ProductAndesModel> ListaAndes = new();
                 List<CategoryResponse> Categortias = new();
 
-        
+
 
                 var ProductosAndes = await data.GetProductosAndes();
                 ListaAndes = ProductosAndes.ToList();
@@ -698,7 +698,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                 {
                                     Categortias = await GetCategory(urlCategory, login, token);
 
-                                     if (categoria.IDGrupo > 0 && categoria.IDGrupo != null)
+                                    if (categoria.IDGrupo > 0 && categoria.IDGrupo != null)
                                     {
                                         item.product.categories.Add(new Category
                                         {
@@ -855,7 +855,8 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 return "error";
             }
         }
-        static async Task<List<CategoryResponse>> GetCategory( string urlCategory, string login, string token) {
+        static async Task<List<CategoryResponse>> GetCategory(string urlCategory, string login, string token)
+        {
             try
             {
                 List<CategoryResponse> Categortias = new();
@@ -871,7 +872,31 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                     return new List<CategoryResponse>() { };
                 }
             }
-            catch (Exception e) {
+            catch (Exception e)
+            {
+
+                return new List<CategoryResponse>() { };
+            }
+        }
+        static async Task<List<CategoryResponse>> PostCategory(string urlCategory, string login, string token)
+        {
+            try
+            {
+                List<CategoryResponse> Categortias = new();
+                var resultCategory = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCategory}?login={login}&authtoken={token}");
+                if (resultCategory.IsSuccessStatusCode)
+                {
+                    string responseContentCategory = await resultCategory.Content.ReadAsStringAsync();
+                    Categortias = JsonConvert.DeserializeObject<List<CategoryResponse>>(responseContentCategory);
+                    return Categortias;
+                }
+                else
+                {
+                    return new List<CategoryResponse>() { };
+                }
+            }
+            catch (Exception e)
+            {
 
                 return new List<CategoryResponse>() { };
             }
