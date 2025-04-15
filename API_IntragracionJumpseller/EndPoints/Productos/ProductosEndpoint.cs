@@ -239,6 +239,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                         }
                     }
 
+
                     if (totalProductsList.Count > 0)
                     {
                         foreach (var product in totalProductsList)
@@ -246,11 +247,19 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                             if (!totalProductsListJumseller.Exists(x => x.product.sku == product.IDArticulo))
                             {
 
+                                if (product.CategorizacionWeb != null)
+                                {
+                                    foreach (var categoria in product.CategorizacionWeb)
+                                    {
+                                        await PostCategory(urlCategory, login, token, categoria);
+                                    }
+                                }
+
                                 productPost = new() { product = new Product { categories = new List<Category>() } };
                                 productPost.product.name = product.Nombre;
                                 productPost.product.page_title = product.NombreWeb;
                                 productPost.product.meta_description = product.DescripcionComercial;
-                                productPost.product.description = String.IsNullOrEmpty(product.DescripcionComercial) ? product.DescripcionComercial : product.TextoWeb; // descripcion comercial == "" dejo descripcion web
+                                productPost.product.description = !String.IsNullOrEmpty(product.DescripcionComercial) ? product.DescripcionComercial : product.TextoWeb; // descripcion comercial == "" dejo descripcion web
                                 productPost.product.type = "physical";
                                 productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
                                 productPost.product.sku = product.IDArticulo;
@@ -259,26 +268,51 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                 productPost.product.brand = product.Marca;
                                 productPost.product.status = product.Stock > 0 ? "available" : "not-available";
                                 productPost.product.google_product_category = product.Grupo;
-                                foreach (var categoria in product.CategorizacionWeb)
+                                if (product.CategorizacionWeb != null)
                                 {
-                                    Categortias = await GetCategory(urlCategory, login, token);
-                                    if (categoria.IDGrupo > 0 && categoria.IDGrupo != null)
+                                    foreach (var categoria in product.CategorizacionWeb)
                                     {
-                                        productPost.product.categories.Add(new Category
+                                        Categortias = await GetCategory(urlCategory, login, token);
+                                        if (categoria.IDGrupo > 0 && categoria.IDGrupo != null)
                                         {
-                                            id = categoria.IDGrupo,
-                                            name = categoria.Grupo,
-                                            parent_id = 0,
-                                            permalink = categoria.Grupo
-                                        });
+                                            productPost.product.categories.Add(new Category
+                                            {
+                                                id = categoria.IDGrupo,
+                                                name = categoria.Grupo,
+                                                parent_id = 0,
+                                                permalink = categoria.Grupo
+                                            });
 
-                                        if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
+                                            if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
+                                            {
+                                                productPost.product.categories.Add(new Category
+                                                {
+                                                    id = categoria.IDCategoria,
+                                                    name = categoria.Categoria,
+                                                    parent_id = categoria.IDGrupo,
+                                                    permalink = categoria.Categoria
+                                                });
+
+                                                if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
+                                                {
+                                                    productPost.product.categories.Add(new Category
+                                                    {
+                                                        id = categoria.IDSubCategoria,
+                                                        name = categoria.SubCategoria,
+                                                        parent_id = categoria.IDSubCategoria,
+                                                        permalink = categoria.SubCategoria
+                                                    });
+                                                }
+                                            }
+
+                                        }
+                                        else if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
                                         {
                                             productPost.product.categories.Add(new Category
                                             {
                                                 id = categoria.IDCategoria,
                                                 name = categoria.Categoria,
-                                                parent_id = categoria.IDGrupo,
+                                                parent_id = 0,
                                                 permalink = categoria.Categoria
                                             });
 
@@ -293,38 +327,16 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                                 });
                                             }
                                         }
-
-                                    }
-                                    else if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
-                                    {
-                                        productPost.product.categories.Add(new Category
-                                        {
-                                            id = categoria.IDCategoria,
-                                            name = categoria.Categoria,
-                                            parent_id = 0,
-                                            permalink = categoria.Categoria
-                                        });
-
-                                        if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
+                                        else if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
                                         {
                                             productPost.product.categories.Add(new Category
                                             {
                                                 id = categoria.IDSubCategoria,
                                                 name = categoria.SubCategoria,
-                                                parent_id = categoria.IDSubCategoria,
+                                                parent_id = 0,
                                                 permalink = categoria.SubCategoria
                                             });
                                         }
-                                    }
-                                    else if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
-                                    {
-                                        productPost.product.categories.Add(new Category
-                                        {
-                                            id = categoria.IDSubCategoria,
-                                            name = categoria.SubCategoria,
-                                            parent_id = 0,
-                                            permalink = categoria.SubCategoria
-                                        });
                                     }
                                 }
                                 var resultPostProduct = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync<ProductsModel>($"{urlProducts}?login={login}&authtoken={token}", productPost);
@@ -376,11 +388,13 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                             }
                                             else
                                             {
+                                                string responseImgbb = await resultImgBB.Content.ReadAsStringAsync();
+
                                                 productPost = new() { product = new Product { categories = new List<Category>() } };
                                                 productPost.product.name = product.Nombre;
                                                 productPost.product.page_title = product.NombreWeb;
                                                 productPost.product.meta_description = product.DescripcionComercial;
-                                                productPost.product.description = String.IsNullOrEmpty(product.TextoWeb) ? product.DescripcionComercial : product.TextoWeb;
+                                                productPost.product.description = !String.IsNullOrEmpty(product.DescripcionComercial) ? product.DescripcionComercial : product.TextoWeb;
                                                 productPost.product.type = "physical";
                                                 productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
                                                 productPost.product.sku = product.IDArticulo;
@@ -389,6 +403,120 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                                 productPost.product.brand = product.Marca;
                                                 productPost.product.status = product.Stock > 0 ? "available" : "not-available";
                                                 productPost.product.google_product_category = product.Grupo;
+                                                if (product.CategorizacionWeb != null)
+                                                {
+                                                    foreach (var categoria in product.CategorizacionWeb)
+                                                    {
+                                                        if (categoria.IDGrupo > 0 && categoria.IDGrupo != null)
+                                                        {
+                                                            productPost.product.categories.Add(new Category
+                                                            {
+                                                                id = categoria.IDGrupo,
+                                                                name = categoria.Grupo,
+                                                                parent_id = 0,
+                                                                permalink = categoria.Grupo
+                                                            });
+
+                                                            if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
+                                                            {
+                                                                productPost.product.categories.Add(new Category
+                                                                {
+                                                                    id = categoria.IDCategoria,
+                                                                    name = categoria.Categoria,
+                                                                    parent_id = categoria.IDGrupo,
+                                                                    permalink = categoria.Categoria
+                                                                });
+
+                                                                if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
+                                                                {
+                                                                    productPost.product.categories.Add(new Category
+                                                                    {
+                                                                        id = categoria.IDSubCategoria,
+                                                                        name = categoria.SubCategoria,
+                                                                        parent_id = categoria.IDSubCategoria,
+                                                                        permalink = categoria.SubCategoria
+                                                                    });
+                                                                }
+                                                            }
+
+                                                        }
+                                                        else if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
+                                                        {
+                                                            productPost.product.categories.Add(new Category
+                                                            {
+                                                                id = categoria.IDCategoria,
+                                                                name = categoria.Categoria,
+                                                                parent_id = 0,
+                                                                permalink = categoria.Categoria
+                                                            });
+
+                                                            if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
+                                                            {
+                                                                productPost.product.categories.Add(new Category
+                                                                {
+                                                                    id = categoria.IDSubCategoria,
+                                                                    name = categoria.SubCategoria,
+                                                                    parent_id = categoria.IDSubCategoria,
+                                                                    permalink = categoria.SubCategoria
+                                                                });
+                                                            }
+                                                        }
+                                                        else if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
+                                                        {
+                                                            productPost.product.categories.Add(new Category
+                                                            {
+                                                                id = categoria.IDSubCategoria,
+                                                                name = categoria.SubCategoria,
+                                                                parent_id = 0,
+                                                                permalink = categoria.SubCategoria
+                                                            });
+                                                        }
+                                                    }
+                                                }
+                                                if (resultPostProduct.IsSuccessStatusCode)
+                                                {
+                                                    string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
+                                                    ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
+                                                    createdProducts.Add(new ResponseCreacion
+                                                    {
+                                                        IDJumpseller = responseProductShimanoData.product.id,
+                                                        Sku = responseProductShimanoData.product.sku,
+                                                        NombreArticulo = responseProductShimanoData.product.name,
+                                                        SiImg = "No",
+                                                        Status = "Creado"
+                                                    });
+                                                }
+                                                else
+                                                {
+                                                    createdProducts.Add(new ResponseCreacion
+                                                    {
+                                                        IDJumpseller = 0,
+                                                        Sku = product.IDArticulo,
+                                                        NombreArticulo = product.Nombre,
+                                                        SiImg = "No",
+                                                        Status = "No Creado"
+                                                    });
+                                                }
+                                            }
+
+                                        }
+                                        else
+                                        {
+                                            productPost = new() { product = new Product { categories = new List<Category>() } };
+                                            productPost.product.name = product.Nombre;
+                                            productPost.product.page_title = product.NombreWeb;
+                                            productPost.product.meta_description = product.DescripcionComercial;
+                                            productPost.product.description = !String.IsNullOrEmpty(product.DescripcionComercial) ? product.DescripcionComercial : product.TextoWeb;
+                                            productPost.product.type = "physical";
+                                            productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
+                                            productPost.product.sku = product.IDArticulo;
+                                            productPost.product.stock = product.Stock;
+                                            productPost.product.barcode = product.IDArticulo;
+                                            productPost.product.brand = product.Marca;
+                                            productPost.product.status = product.Stock > 0 ? "available" : "not-available";
+                                            productPost.product.google_product_category = product.Grupo;
+                                            if (product.CategorizacionWeb != null)
+                                            {
                                                 foreach (var categoria in product.CategorizacionWeb)
                                                 {
                                                     if (categoria.IDGrupo > 0 && categoria.IDGrupo != null)
@@ -455,114 +583,6 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                                             permalink = categoria.SubCategoria
                                                         });
                                                     }
-                                                }
-                                                if (resultPostProduct.IsSuccessStatusCode)
-                                                {
-                                                    string responseProductShimano = await resultPostProduct.Content.ReadAsStringAsync();
-                                                    ProductsModel? responseProductShimanoData = JsonConvert.DeserializeObject<ProductsModel>(responseProductShimano);
-                                                    createdProducts.Add(new ResponseCreacion
-                                                    {
-                                                        IDJumpseller = responseProductShimanoData.product.id,
-                                                        Sku = responseProductShimanoData.product.sku,
-                                                        NombreArticulo = responseProductShimanoData.product.name,
-                                                        SiImg = "No",
-                                                        Status = "Creado"
-                                                    });
-                                                }
-                                                else
-                                                {
-                                                    createdProducts.Add(new ResponseCreacion
-                                                    {
-                                                        IDJumpseller = 0,
-                                                        Sku = product.IDArticulo,
-                                                        NombreArticulo = product.Nombre,
-                                                        SiImg = "No",
-                                                        Status = "No Creado"
-                                                    });
-                                                }
-                                            }
-
-                                        }
-                                        else
-                                        {
-                                            productPost = new() { product = new Product { categories = new List<Category>() } };
-                                            productPost.product.name = product.Nombre;
-                                            productPost.product.page_title = product.NombreWeb;
-                                            productPost.product.meta_description = product.DescripcionComercial;
-                                            productPost.product.description = String.IsNullOrEmpty(product.TextoWeb) ? product.DescripcionComercial : product.TextoWeb;
-                                            productPost.product.type = "physical";
-                                            productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
-                                            productPost.product.sku = product.IDArticulo;
-                                            productPost.product.stock = product.Stock;
-                                            productPost.product.barcode = product.IDArticulo;
-                                            productPost.product.brand = product.Marca;
-                                            productPost.product.status = product.Stock > 0 ? "available" : "not-available";
-                                            productPost.product.google_product_category = product.Grupo;
-                                            foreach (var categoria in product.CategorizacionWeb)
-                                            {
-                                                if (categoria.IDGrupo > 0 && categoria.IDGrupo != null)
-                                                {
-                                                    productPost.product.categories.Add(new Category
-                                                    {
-                                                        id = categoria.IDGrupo,
-                                                        name = categoria.Grupo,
-                                                        parent_id = 0,
-                                                        permalink = categoria.Grupo
-                                                    });
-
-                                                    if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
-                                                    {
-                                                        productPost.product.categories.Add(new Category
-                                                        {
-                                                            id = categoria.IDCategoria,
-                                                            name = categoria.Categoria,
-                                                            parent_id = categoria.IDGrupo,
-                                                            permalink = categoria.Categoria
-                                                        });
-
-                                                        if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
-                                                        {
-                                                            productPost.product.categories.Add(new Category
-                                                            {
-                                                                id = categoria.IDSubCategoria,
-                                                                name = categoria.SubCategoria,
-                                                                parent_id = categoria.IDSubCategoria,
-                                                                permalink = categoria.SubCategoria
-                                                            });
-                                                        }
-                                                    }
-
-                                                }
-                                                else if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
-                                                {
-                                                    productPost.product.categories.Add(new Category
-                                                    {
-                                                        id = categoria.IDCategoria,
-                                                        name = categoria.Categoria,
-                                                        parent_id = 0,
-                                                        permalink = categoria.Categoria
-                                                    });
-
-                                                    if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
-                                                    {
-                                                        productPost.product.categories.Add(new Category
-                                                        {
-                                                            id = categoria.IDSubCategoria,
-                                                            name = categoria.SubCategoria,
-                                                            parent_id = categoria.IDSubCategoria,
-                                                            permalink = categoria.SubCategoria
-                                                        });
-                                                    }
-                                                }
-                                                else if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
-                                                {
-                                                    productPost.product.categories.Add(new Category
-                                                    {
-                                                        id = categoria.IDSubCategoria,
-                                                        name = categoria.SubCategoria,
-                                                        parent_id = 0,
-                                                        permalink = categoria.SubCategoria
-                                                    });
                                                 }
                                             }
 
@@ -878,28 +898,79 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 return new List<CategoryResponse>() { };
             }
         }
-        static async Task<List<CategoryResponse>> PostCategory(string urlCategory, string login, string token)
+        static async Task PostCategory(string urlCategory, string login, string token, CategorizacionWebItemModel data)
         {
             try
             {
-                List<CategoryResponse> Categortias = new();
-                var resultCategory = await MainServices.JumpSeller.HttpClientInstance.GetAsync($"{urlCategory}?login={login}&authtoken={token}");
-                if (resultCategory.IsSuccessStatusCode)
+                List<CategoryResponse> existingCategories = await GetCategory(urlCategory, login, token);
+
+                // Crear grupo si no existe
+                if (data.IDGrupo != 0 && !existingCategories.Any(x => x.Category.name == data.Grupo))
                 {
-                    string responseContentCategory = await resultCategory.Content.ReadAsStringAsync();
-                    Categortias = JsonConvert.DeserializeObject<List<CategoryResponse>>(responseContentCategory);
-                    return Categortias;
+                    var groupResponse = await PostCategoryAsync(urlCategory, login, token, data.Grupo, null);
+                    if (groupResponse != null && data.IDCategoria != 0)
+                    {
+                        // Crear categoría si no existe
+                        var categoryResponse = await PostCategoryAsync(urlCategory, login, token, data.Categoria, groupResponse.Category.id);
+                        if (categoryResponse != null && data.IDSubCategoria != 0)
+                        {
+                            // Crear subcategoría si no existe
+                            await PostCategoryAsync(urlCategory, login, token, data.SubCategoria, categoryResponse.Category.id);
+                        }
+                    }
                 }
-                else
+                else if (data.IDCategoria != 0 && !existingCategories.Any(x => x.Category.name == data.Categoria))
                 {
-                    return new List<CategoryResponse>() { };
+                    // Crear categoría si no existe
+                    var parentId = existingCategories.FirstOrDefault(x => x.Category.name == data.Grupo)?.Category.id;
+                    var categoryResponse = await PostCategoryAsync(urlCategory, login, token, data.Categoria, parentId);
+                    if (categoryResponse != null && data.IDSubCategoria != 0)
+                    {
+                        // Crear subcategoría si no existe
+                        await PostCategoryAsync(urlCategory, login, token, data.SubCategoria, categoryResponse.Category.id);
+                    }
+                }
+                else if (data.IDSubCategoria != 0 && !existingCategories.Any(x => x.Category.name == data.SubCategoria))
+                {
+                    // Crear subcategoría si no existe
+                    var parentId = existingCategories.FirstOrDefault(x => x.Category.name == data.Categoria)?.Category.id;
+                    await PostCategoryAsync(urlCategory, login, token, data.SubCategoria, parentId);
                 }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-
-                return new List<CategoryResponse>() { };
+                // Manejo de errores
+                Console.Error.WriteLine($"Error al procesar la categoría: {ex.Message}");
             }
         }
+
+        private static async Task<CategoryResponse?> PostCategoryAsync(string urlCategory, string login, string token, string name, int? parentId)
+        {
+            try
+            {
+                var categoryToPost = new CategoryResponse
+                {
+                    Category = new CategoryModel
+                    {
+                        name = name,
+                        parent_id = parentId
+                    }
+                };
+
+                var response = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync($"{urlCategory}?login={login}&authtoken={token}", categoryToPost);
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseContent = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<CategoryResponse>(responseContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error al crear la categoría '{name}': {ex.Message}");
+            }
+
+            return null;
+        }
+
     }
 }
