@@ -17,14 +17,14 @@ namespace DataAccess.Models.ProductAndes
         public int Stock { get; set; }
         public int UltimoPrecioCosto { get; set; }
         public int UltimoPrecioCompra { get; set; }
-        public int IDProveedor { get; set; }
+        public string IDProveedor { get; set; }
         public string Proveedor { get; set; }
         public int IDGrupoArticulo { get; set; }
         public string Grupo { get; set; }
         public int IDSubGrupoArticulo { get; set; }
         public string SubGrupo { get; set; }
         public string Texto1 { get; set; }
-        public string Descripcion { get; set; }
+        public string DescripcionComercial { get; set; } // cambio header
         public string Texto2 { get; set; }
         public string Modelo { get; set; }
         public string TextoFotoWeb { get; set; }
@@ -51,7 +51,7 @@ namespace DataAccess.Models.ProductAndes
         public int IDSubCategoriaAgrupa { get; set; }
         public string SubCategoriaAgrupa { get; set; }
         public string Metros { get; set; }
-        public string CategorizacionWeb { get; set; }
+        public List<CategorizacionWebItemModel> CategorizacionWeb { get; set; }
 
         // Propiedad para manejar las imágenes
         public List<ImagenArticulo> Imagen { get; set; } 
@@ -61,5 +61,15 @@ namespace DataAccess.Models.ProductAndes
     {
         public string Imagen { get; set; } // Ejemplo: "130068.jpg"
         public string ToolTip { get; set; } // Nota: Corregí el nombre de "ToolTilp" a "ToolTip"
+    }
+
+    public class CategorizacionWebItemModel
+    {
+        public int IDGrupo { get; set; }
+        public string Grupo { get; set; }
+        public int IDCategoria { get; set; }
+        public string Categoria { get; set; }
+        public int IDSubCategoria { get; set; }
+        public string SubCategoria { get; set; }
     }
 }

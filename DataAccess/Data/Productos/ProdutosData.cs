@@ -41,6 +41,14 @@ namespace DataAccess.Data.Productos
            {
                IDAllGestEmpresa = IDAllGestEmpresa,
                IDEmpresa = IDEmpresa
+           }); 
+        
+        public Task<IEnumerable<ProductAndesModel>> PostProductoToAndes() =>
+         _db.LoadData<ProductAndesModel, dynamic>(storedProcedure: "exec sp_ActualizaArticulosBikesBagels",
+           new
+           {
+               IDAllGestEmpresa = IDAllGestEmpresa,
+               IDEmpresa = IDEmpresa
            });
 
         public async Task<CountModel> GetCountJumpseller(string login, string auth, string url = "v1/products/count.json")
