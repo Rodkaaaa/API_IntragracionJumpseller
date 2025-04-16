@@ -261,7 +261,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                 productPost.product.meta_description = product.DescripcionComercial;
                                 productPost.product.description = !String.IsNullOrEmpty(product.DescripcionComercial) ? product.DescripcionComercial : product.TextoWeb; // descripcion comercial == "" dejo descripcion web
                                 productPost.product.type = "physical";
-                                productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
+                                productPost.product.price = product.PrecioVenta;
                                 productPost.product.sku = product.IDArticulo;
                                 productPost.product.stock = product.Stock;
                                 productPost.product.barcode = product.IDArticulo;
@@ -398,7 +398,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                                 productPost.product.meta_description = product.DescripcionComercial;
                                                 productPost.product.description = !String.IsNullOrEmpty(product.DescripcionComercial) ? product.DescripcionComercial : product.TextoWeb;
                                                 productPost.product.type = "physical";
-                                                productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
+                                                productPost.product.price = product.PrecioVenta;
                                                 productPost.product.sku = product.IDArticulo;
                                                 productPost.product.stock = product.Stock;
                                                 productPost.product.barcode = product.IDArticulo;
@@ -510,7 +510,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                             productPost.product.meta_description = product.DescripcionComercial;
                                             productPost.product.description = !String.IsNullOrEmpty(product.DescripcionComercial) ? product.DescripcionComercial : product.TextoWeb;
                                             productPost.product.type = "physical";
-                                            productPost.product.price = product.PrecioVenta > 0 ? (float)((product.PrecioVenta * 2) * 0.85) : 1;
+                                            productPost.product.price = product.PrecioVenta;
                                             productPost.product.sku = product.IDArticulo;
                                             productPost.product.stock = product.Stock;
                                             productPost.product.barcode = product.IDArticulo;
