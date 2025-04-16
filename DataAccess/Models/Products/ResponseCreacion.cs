@@ -13,5 +13,6 @@ namespace DataAccess.Models.Products
         public string NombreArticulo { get; set; }
         public string Status { get; set; }
         public string SiImg { get; set; }
+        public string ActualizadoStatusAndes { get; set; }
     }
 }

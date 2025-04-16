@@ -717,10 +717,11 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                             if (ListaAndes.Any(x => x.IDArticulo == item.product.sku))
                             {
                                 service = new MainServices();
+                                var resultPostToAndes = await data.PostProductoToAndes(item.product.sku, item.product.id.ToString());
                                 item.product.stock = ListaAndes.Find(x => x.IDArticulo == item.product.sku).Stock;
                                 item.product.price = ListaAndes.Find(x => x.IDArticulo == item.product.sku).PrecioVenta;
                                 item.product.status = ListaAndes.Find(x => x.IDArticulo == item.product.sku).Stock > 0 ? "available" : "not-available";
-                               
+
 
 
                                 var ResponsePutPRoducto = await MainServices.JumpSeller.HttpClientInstance.PutAsJsonAsync($"{urlUpdateProducts}{item.product.id}.json?login={login}&authtoken={token}", item);
@@ -732,7 +733,8 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                         Sku = item.product.sku,
                                         NombreArticulo = item.product.name,
                                         SiImg = "",
-                                        Status = "Actualizado"
+                                        Status = "Actualizado",
+                                        ActualizadoStatusAndes = resultPostToAndes
                                     });
 
                                 }
@@ -744,7 +746,9 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                         Sku = item.product.sku,
                                         NombreArticulo = item.product.name,
                                         SiImg = "",
-                                        Status = "No Actualizado"
+                                        Status = "No Actualizado",
+                                        ActualizadoStatusAndes = resultPostToAndes
+
                                     });
                                 }
                             }
@@ -756,7 +760,8 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                                     Sku = item.product.sku,
                                     NombreArticulo = item.product.name,
                                     SiImg = "",
-                                    Status = "No existe Lista Andes"
+                                    Status = "No existe Lista Andes",
+                                    ActualizadoStatusAndes = "NO"
                                 });
                             }
                         }

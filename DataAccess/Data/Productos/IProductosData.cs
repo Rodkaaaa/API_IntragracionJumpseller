@@ -12,5 +12,6 @@ namespace DataAccess.Data.Productos
     {
         Task<IEnumerable<ProductAndesModel>> GetProductosAndes();
         Task<CountModel> GetCountJumpseller( string login , string auth, string url = "v1/products/count.json");
+        Task<string> PostProductoToAndes(string IDArticulo, string IDJumpSeller);
     }
 }
