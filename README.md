@@ -14,7 +14,7 @@ Este proyecto es una API de integración para subempresa, desarrollada en C#. Pe
 
 ## Requisitos
 
-- [.NET Core SDK](https://dotnet.microsoft.com/download) 3.1 o superior
+- [.NET Core SDK](https://dotnet.microsoft.com/download) 8.0.4 o superior
 - Visual Studio 2019 o superior (opcional, pero recomendado para desarrollo)
 
 ## Instalación
