@@ -666,6 +666,7 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 string urlProducts = "v1/products.json";
                 string urlUpdateProducts = "v1/products/";
                 string urlCount = "v1/products/count.json";
+                string urlCategoryPUT = "v1/categories";
                 string urlCategory = "v1/categories.json";
                 string login = configuration["JumpSeller:LoginToken"] ?? "";
                 string token = configuration["JumpSeller:AuthToken"] ?? "";
@@ -674,6 +675,11 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 List<ProductAndesModel> ListaAndes = new();
                 List<CategoryResponse> Categortias = new();
 
+                Categortias = await GetCategory(urlCategory, login, token);
+                foreach (var categoria in Categortias)
+                {
+                    await putCategoryAsync(urlCategoryPUT, login, token, categoria.Category.name, categoria.Category.parent_id, categoria.Category.id);
+                }
 
 
                 var ProductosAndes = await data.GetProductosAndes();
@@ -711,83 +717,10 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                             if (ListaAndes.Any(x => x.IDArticulo == item.product.sku))
                             {
                                 service = new MainServices();
-
-
                                 item.product.stock = ListaAndes.Find(x => x.IDArticulo == item.product.sku).Stock;
                                 item.product.price = ListaAndes.Find(x => x.IDArticulo == item.product.sku).PrecioVenta;
                                 item.product.status = ListaAndes.Find(x => x.IDArticulo == item.product.sku).Stock > 0 ? "available" : "not-available";
-                                foreach (var categoria in ListaAndes.Find(x => x.IDArticulo == item.product.sku).CategorizacionWeb)
-                                {
-                                    Categortias = await GetCategory(urlCategory, login, token);
-
-                                    if (categoria.IDGrupo > 0 && categoria.IDGrupo != null)
-                                    {
-                                        item.product.categories.Add(new Category
-                                        {
-                                            id = categoria.IDGrupo,
-                                            name = categoria.Grupo,
-                                            parent_id = 0,
-                                            permalink = categoria.Grupo
-                                        });
-
-                                        if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
-                                        {
-                                            item.product.categories.Add(new Category
-                                            {
-                                                id = categoria.IDCategoria,
-                                                name = categoria.Categoria,
-                                                parent_id = categoria.IDGrupo != 0
-                                                    ? (Categortias.Find(x => x.Category.name == categoria.Categoria)?.Category.id ?? 0)
-                                                    : 0,
-                                            });
-
-                                            if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
-                                            {
-                                                item.product.categories.Add(new Category
-                                                {
-                                                    id = categoria.IDSubCategoria,
-                                                    name = categoria.SubCategoria,
-                                                    parent_id = categoria.IDSubCategoria != 0
-                                                        ? (Categortias.Find(x => x.Category.name == categoria.SubCategoria)?.Category.id ?? 0)
-                                                        : 0,
-                                                    permalink = categoria.SubCategoria
-                                                });
-                                            }
-                                        }
-
-                                    }
-                                    else if (categoria.IDCategoria > 0 && categoria.IDCategoria != null)
-                                    {
-                                        item.product.categories.Add(new Category
-                                        {
-                                            id = categoria.IDCategoria,
-                                            name = categoria.Categoria,
-                                            parent_id = 0,
-                                            permalink = categoria.Categoria
-                                        });
-
-                                        if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
-                                        {
-                                            item.product.categories.Add(new Category
-                                            {
-                                                id = categoria.IDSubCategoria,
-                                                name = categoria.SubCategoria,
-                                                parent_id = categoria.IDSubCategoria,
-                                                permalink = categoria.SubCategoria
-                                            });
-                                        }
-                                    }
-                                    else if (categoria.IDSubCategoria > 0 && categoria.IDSubCategoria != null)
-                                    {
-                                        item.product.categories.Add(new Category
-                                        {
-                                            id = categoria.IDSubCategoria,
-                                            name = categoria.SubCategoria,
-                                            parent_id = 0,
-                                            permalink = categoria.SubCategoria
-                                        });
-                                    }
-                                }
+                               
 
 
                                 var ResponsePutPRoducto = await MainServices.JumpSeller.HttpClientInstance.PutAsJsonAsync($"{urlUpdateProducts}{item.product.id}.json?login={login}&authtoken={token}", item);
@@ -945,7 +878,6 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 Console.Error.WriteLine($"Error al procesar la categoría: {ex.Message}");
             }
         }
-
         private static async Task<CategoryResponse?> PostCategoryAsync(string urlCategory, string login, string token, string name, int? parentId)
         {
             try
@@ -960,6 +892,33 @@ namespace API_IntragracionJumpseller.EndPoints.Productos
                 };
 
                 var response = await MainServices.JumpSeller.HttpClientInstance.PostAsJsonAsync($"{urlCategory}?login={login}&authtoken={token}", categoryToPost);
+                if (response.IsSuccessStatusCode)
+                {
+                    string responseContent = await response.Content.ReadAsStringAsync();
+                    return JsonConvert.DeserializeObject<CategoryResponse>(responseContent);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"Error al crear la categoría '{name}': {ex.Message}");
+            }
+
+            return null;
+        }
+        private static async Task<CategoryResponse?> putCategoryAsync(string urlCategory, string login, string token, string name, int? parentId, int? IDCategory)
+        {
+            try
+            {
+                var categoryToPost = new CategoryResponse
+                {
+                    Category = new CategoryModel
+                    {
+                        name = name.ToUpper(),
+                        parent_id = parentId
+                    }
+                };
+
+                var response = await MainServices.JumpSeller.HttpClientInstance.PutAsJsonAsync($"{urlCategory}/{IDCategory}.json?login={login}&authtoken={token}", categoryToPost);
                 if (response.IsSuccessStatusCode)
                 {
                     string responseContent = await response.Content.ReadAsStringAsync();
