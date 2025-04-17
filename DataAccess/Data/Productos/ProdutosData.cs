@@ -41,15 +41,24 @@ namespace DataAccess.Data.Productos
            {
                IDAllGestEmpresa = IDAllGestEmpresa,
                IDEmpresa = IDEmpresa
-           }); 
-        
-        public Task<IEnumerable<ProductAndesModel>> PostProductoToAndes() =>
-         _db.LoadData<ProductAndesModel, dynamic>(storedProcedure: "exec sp_ActualizaArticulosBikesBagels",
-           new
-           {
-               IDAllGestEmpresa = IDAllGestEmpresa,
-               IDEmpresa = IDEmpresa
            });
+
+        public async Task<string> PostProductoToAndes(string IDArticulo, string IDJumpSeller)
+        {
+            var result = await _db.LoadData<string, dynamic>(
+                storedProcedure: "sp_ActualizaArticulosBikesBagels",
+                new
+                {
+                    IDAllGestEmpresa,
+                    IDEmpresa,
+                    IDArticulo,
+                    IDJumpSeller
+                });
+
+            return result.FirstOrDefault() ?? string.Empty;
+        }
+
+
 
         public async Task<CountModel> GetCountJumpseller(string login, string auth, string url = "v1/products/count.json")
         {
@@ -67,9 +76,9 @@ namespace DataAccess.Data.Productos
                 string response = JsonConvert.DeserializeObject<string>(content) ?? "Error";
 
                 return new CountModel
-                    {
-                        status = response
-                    };
+                {
+                    status = response
+                };
 
 
             }
